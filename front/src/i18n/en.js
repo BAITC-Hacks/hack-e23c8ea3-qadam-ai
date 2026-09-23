@@ -13,6 +13,8 @@ export default {
   mEyebrow: 'Team', mTitle: 'Our proposals', mSub: 'See what the business replied. Points arrive once the business confirms a work stage.',
   score: 'Readiness score', breakdown: 'What it’s made of', raise: 'What will raise the score', growth: 'Score change', fromDraft: 'points since the draft',
   flow: 'End-to-end flow', now: 'now',
+  flowFor: 'Steps 6–8 are for the task', flowHint5: 'Switch to “Students” and send a proposal to “{title}” from any team. Proposals to other tasks don’t count here.', flowHint6: 'As “Business”, open “Proposals” and manually accept or decline a team for “{title}”.', flowGo5: 'Open the task as a student', flowGo6: 'Go to proposals', flowHint7: 'For the selected team, press “Confirm stage” — it gets points.',
+  flowHint7None: 'No team is selected for “{title}”. Return a declined proposal to review and press “Select”, or wait for a new proposal — a stage can only be confirmed for a selected team.',
   s0: 'Draft', s1: 'Clarify', s2: 'Card', s3: 'Score', s4: 'Catalog', s5: 'Team proposal', s6: 'Business choice', s7: 'Result',
 
   level_priority: 'Priority', level_ready: 'Ready', level_working: 'Working', level_draft: 'Draft',

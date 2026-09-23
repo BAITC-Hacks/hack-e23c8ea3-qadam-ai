@@ -449,10 +449,11 @@ export function QadamProvider({ children }) {
     setToast({ tone: 'ok', text: t('toastMilestone') })
   }, [proposals, teams, milestones, role, myTaskIds, t])
 
-  const switchRole = useCallback((r) => {
+  // view — необязательный экран, куда перейти в новой роли (например, из трекера сценария).
+  const switchRole = useCallback((r, view, openId = null) => {
     setRole(r)
-    setView(clampView(r, r === 'business' ? 'builder' : 'catalog'))
-    setOpenTaskId(null)
+    setView(clampView(r, view || (r === 'business' ? 'builder' : 'catalog')))
+    setOpenTaskId(openId)
   }, [])
 
   const nav = role === 'business'

@@ -39,6 +39,18 @@ function Shell() {
     setInboxTaskId(null)
     q.changeCompany(companyId)
   }
+  // Трекер сценария: шаги 6–8 всегда про последнюю опубликованную задачу.
+  const flowTask = q.scored.find((x) => x.id === q.newTaskId)
+  const flowAccepted = q.proposals.some((p) => p.taskId === q.newTaskId && p.status === 'accepted')
+  const onFlowAction = (step) => {
+    if (!flowTask) return
+    if (step === 5) { setInboxTaskId(null); q.switchRole('student', 'catalog', flowTask.id); return }
+    // Отклики открываем от компании-владельца задачи и сразу на её вкладке.
+    const owner = q.companies.find((c) => c.name === flowTask.company)
+    if (owner && owner.id !== q.companyId) q.changeCompany(owner.id)
+    setInboxTaskId(flowTask.id)
+    q.switchRole('business', 'proposals')
+  }
   const openInbox = () => {
     if (q.role !== 'business' || !q.openTask?.owner) return
     setInboxTaskId(q.openTask.id)
@@ -121,7 +133,7 @@ function Shell() {
               )}
               {q.view === 'proposals' && (
                 <Proposals
-                  key={`${q.role}:${q.companyId}:${inboxTaskId || ''}`}
+                  key={`${q.role}:${q.companyId}`}
                   tasks={q.scored.filter((x) => x.owner)}
                   proposals={q.proposals}
                   teams={q.teams}
@@ -131,6 +143,7 @@ function Shell() {
                   onMilestone={q.confirmMilestone}
                   newTaskId={q.newTaskId}
                   requestedTaskId={inboxTaskId}
+                  onSelectTask={setInboxTaskId}
                 />
               )}
               {q.view === 'mine' && (
@@ -144,7 +157,8 @@ function Shell() {
               ) : (
                 <ImpactPanel tasks={q.scored} proposals={q.proposals} teams={q.teams} role={q.role} teamId={q.teamId} history={q.growth} />
               )}
-              <ScenarioTracker done={q.done} current={q.currentStep} />
+              <ScenarioTracker done={q.done} current={q.currentStep}
+                flowTitle={flowTask?.title} flowAccepted={flowAccepted} onAction={onFlowAction} />
             </aside>
           </div>
         </div>

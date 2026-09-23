@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { ShieldCheck, Clock, Link2, ExternalLink, X, Check, Trophy, Flag, RotateCcw } from 'lucide-react'
 import { PageHead } from '../../components/shell/PageHead.jsx'
 import { Panel } from '../../components/ui/Panel.jsx'
@@ -10,10 +9,9 @@ import { cx } from '../../lib/cx.js'
 import { resolveProposalTask } from '../../lib/proposalSelection.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
-export function Proposals({ tasks, proposals, teams, milestones, decidingId, onDecide, onMilestone, newTaskId, requestedTaskId }) {
+export function Proposals({ tasks, proposals, teams, milestones, decidingId, onDecide, onMilestone, newTaskId, requestedTaskId, onSelectTask }) {
   const tr = useT()
-  const [tab, setTab] = useState(() => resolveProposalTask(tasks, requestedTaskId, newTaskId)?.id)
-  const task = resolveProposalTask(tasks, tab, newTaskId)
+  const task = resolveProposalTask(tasks, requestedTaskId, newTaskId)
   const list = proposals.filter((p) => p.taskId === task?.id)
 
   return (
@@ -28,7 +26,7 @@ export function Proposals({ tasks, proposals, teams, milestones, decidingId, onD
         {tasks.map((x) => {
           const n = proposals.filter((p) => p.taskId === x.id && p.status === 'pending').length
           return (
-            <button key={x.id} type="button" onClick={() => setTab(x.id)} className={cx('flex max-w-[260px] shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition',
+            <button key={x.id} type="button" onClick={() => onSelectTask(x.id)} className={cx('flex max-w-[260px] shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left text-xs transition',
               task?.id === x.id ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-900')}>
               <MiniRing score={x.score} size={28} />
               <span className="truncate">{x.title}</span>
