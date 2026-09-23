@@ -6,7 +6,7 @@ export function RoleSwitch({ role, onChange, compact, className }) {
   const t = useT()
   const items = [{ id: 'business', label: t('business'), icon: Briefcase }, { id: 'student', label: t('students'), icon: GraduationCap }]
   return (
-    <div className={cx('grid grid-cols-2 rounded-xl border border-stone-200 bg-white p-1', className)}>
+    <div className={cx('grid grid-cols-2 rounded-xl border border-stone-200 bg-surface p-1', className)}>
       {items.map((i) => (
         <button key={i.id} type="button" onClick={() => onChange(i.id)} aria-pressed={role === i.id}
           className={cx('flex items-center justify-center gap-1.5 rounded-lg font-medium transition', compact ? 'h-7 px-2.5 text-xs' : 'h-8 text-xs',

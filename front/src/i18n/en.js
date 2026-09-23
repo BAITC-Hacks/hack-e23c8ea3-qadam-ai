@@ -1,4 +1,5 @@
 export default {
+  themeLight: 'Light theme', themeDark: 'Dark theme',
   tagline: 'business and students, one step closer', business: 'Business', students: 'Students', youTeam: 'Your team',
   navNew: 'New task', navCatalog: 'Catalog', navInbox: 'Proposals', navMine: 'Our proposals',
   howAI: 'How the AI works', reset: 'Reset demo', language: 'Language', menu: 'Menu',
@@ -39,7 +40,7 @@ export default {
   aiSourceAI: 'Source: server AI', aiSourceStub: 'Source: local stub',
   cardFallback: 'The local stub built this card. Check every field before confirming.',
   cardWarnings: 'Check these points in the card:',
-  aiBackendPrompt: 'These questions came from the server AI. Its working prompt lives on the backend; the local template below was not used for this response.',
+  aiBackendPrompt: 'These questions came from the server AI. Its working prompt lives on the backend; the local stub was not used for this response.',
   aiLocalPrompt: 'Local stub template',
   upTo: 'up to +',
   answerPh: 'Write your answer…',

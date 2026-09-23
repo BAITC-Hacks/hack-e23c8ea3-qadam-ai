@@ -9,7 +9,7 @@ export function MiniRing({ score, size = 44 }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ece8e4" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--q-chart-track)" strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)}
           className={cx(l.key === 'priority' ? 'stroke-orange-500' : l.key === 'ready' ? 'stroke-emerald-500' : l.key === 'working' ? 'stroke-amber-400' : 'stroke-stone-300')} />
       </svg>

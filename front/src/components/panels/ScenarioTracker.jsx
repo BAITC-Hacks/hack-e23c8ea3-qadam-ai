@@ -19,7 +19,7 @@ export function ScenarioTracker({ done, current }) {
         {SCENARIO.map((_, i) => t(`s${i}`)).map((s, i) => (
           <li key={i} className="relative flex items-center gap-3 text-sm">
             <span className={cx('relative grid size-[19px] shrink-0 place-items-center rounded-full border text-[10px]',
-              done[i] ? 'border-orange-500 bg-orange-500 text-white' : i === current ? 'border-orange-500 bg-white text-orange-600' : 'border-stone-300 bg-white text-stone-400')}
+              done[i] ? 'border-orange-500 bg-orange-500 text-on-accent' : i === current ? 'border-orange-500 bg-surface text-orange-600' : 'border-stone-300 bg-surface text-stone-400')}
               style={i === current ? { boxShadow: '0 0 0 4px rgba(249,115,22,.15)' } : undefined}>
               {done[i] ? <Check className="size-3" strokeWidth={3} /> : i + 1}
             </span>

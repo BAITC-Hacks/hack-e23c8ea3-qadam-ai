@@ -1,4 +1,5 @@
 export default {
+  themeLight: 'Ашық тақырып', themeDark: 'Қараңғы тақырып',
   tagline: 'бизнес пен студенттер — бір-біріне бір қадам', business: 'Бизнес', students: 'Студенттер', youTeam: 'Сіздің командаңыз',
   navNew: 'Жаңа тапсырма', navCatalog: 'Каталог', navInbox: 'Өтінімдер', navMine: 'Біздің өтінімдер',
   howAI: 'AI қалай жұмыс істейді', reset: 'Демоны қайта бастау', language: 'Тіл', menu: 'Мәзір',

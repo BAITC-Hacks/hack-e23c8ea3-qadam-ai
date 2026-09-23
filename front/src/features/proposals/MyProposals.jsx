@@ -17,7 +17,7 @@ export function MyProposals({ proposals, tasks, milestones, onOpen }) {
             const task = tasks.find((x) => x.id === p.taskId)
             return (
               <li key={p.id}>
-                <button type="button" onClick={() => onOpen(task.id)} className="flex w-full items-center gap-4 rounded-3xl border border-stone-200 bg-white p-4 text-left transition hover:border-stone-300">
+                <button type="button" onClick={() => onOpen(task.id)} className="flex w-full items-center gap-4 rounded-3xl border border-stone-200 bg-surface p-4 text-left transition hover:border-stone-300">
                   <MiniRing score={task.score} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-stone-900">{task.title}</div>

@@ -37,7 +37,7 @@ export function Proposals({ tasks, proposals, teams, milestones, decidingId, onD
         })}
       </div>
 
-      <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-stone-200 bg-white/70 px-4 py-3 text-xs text-stone-500">
+      <div className="mb-4 flex items-start gap-2.5 rounded-xl border border-stone-200 bg-surface/70 px-4 py-3 text-xs text-stone-500">
         <ShieldCheck className="size-4 shrink-0 text-orange-600" />{tr('proposalsBanner')}
       </div>
 

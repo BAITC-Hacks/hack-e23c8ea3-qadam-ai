@@ -11,8 +11,8 @@ export function AIModal({ ai, draft, onClose }) {
   const out = ai?.data || analyzeDraft(sampleDraft)
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
-      <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="q-in relative max-h-[90vh] w-full overflow-y-auto rounded-t-2xl border border-stone-200 bg-white p-5 sm:max-w-2xl sm:rounded-3xl">
+      <div className="absolute inset-0 bg-overlay/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="q-in relative max-h-[90vh] w-full overflow-y-auto rounded-t-2xl border border-stone-200 bg-surface p-5 sm:max-w-2xl sm:rounded-3xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-orange-600"><Braces className="size-3.5" />{t('aiHood')}</div>
