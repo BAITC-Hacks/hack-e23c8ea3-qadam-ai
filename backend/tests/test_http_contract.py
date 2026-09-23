@@ -17,7 +17,6 @@ from app.schemas import (
     QuestionField,
 )
 
-
 CARD_FIELDS = {
     "title", "industry", "context", "need", "users", "data",
     "constraints", "result", "criteria", "contact", "format",
@@ -158,3 +157,24 @@ def test_http_and_llm_errors_use_same_shape(contract_client):
     missing_route = TestClient(app).get("/api/not-found")
     assert missing_route.status_code == 404
     assert set(missing_route.json()) == {"error"}
+
+
+def test_unexpected_error_does_not_log_secrets_or_contacts(caplog):
+    secret = "fake-test-secret-key"
+    email = "owner@example.com"
+    phone = "+7 777 123 45 67"
+    probe = FastAPI(exception_handlers=app.exception_handlers)
+
+    @probe.get("/unexpected")
+    def unexpected():
+        raise RuntimeError(f"{secret} {email} {phone}")
+
+    with TestClient(probe, raise_server_exceptions=False) as client:
+        response = client.get("/unexpected")
+
+    assert response.status_code == 500
+    assert response.json() == {"error": "Внутренняя ошибка сервера"}
+    assert "RuntimeError" in caplog.text
+    for private_value in (secret, email, phone):
+        assert private_value not in response.text
+        assert private_value not in caplog.text
