@@ -1,4 +1,7 @@
-"""FastAPI-приложение: подключение роутеров и единый формат ошибок {"error": "..."}."""
+"""FastAPI-приложение: ИИ для конструктора и единый формат ошибок {"error": "..."}.
+
+Данные и рейтинг живут во фронтенде, бэкенд отвечает только за вызовы модели.
+"""
 
 import logging
 from contextlib import asynccontextmanager
@@ -8,8 +11,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app import llm, storage
-from app.routers import catalog, constructor, tasks
+from app import llm
+from app.routers import constructor
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger(__name__)
@@ -27,15 +30,12 @@ VALIDATION_MESSAGES = {
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    storage.read()  # создаёт db.json из seed, если его ещё нет
     log.info("ИИ: режим %s, доступен: %s", llm.ai_mode(), llm.ai_available())
     yield
 
 
 app = FastAPI(title="Qadam AI", lifespan=lifespan)
-app.include_router(tasks.router)
 app.include_router(constructor.router)
-app.include_router(catalog.router)
 
 
 @app.get("/api/health")
