@@ -1,0 +1,40 @@
+.home {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.home h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+
+.home__lead {
+  color: #555;
+  max-width: 40rem;
+}
+
+.home__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.home__block {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.home__block h2 {
+  font-size: 1.05rem;
+}
+
+.home__block p {
+  color: #666;
+  font-size: 0.95rem;
+}
