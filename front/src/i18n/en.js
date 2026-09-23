@@ -11,7 +11,7 @@ export default {
   cEyebrow: 'Catalog', cTitle: 'Tasks waiting for a team', cSub: 'Every task is open to every team. The order comes from the readiness score, not from how famous the company is.',
   pEyebrow: 'Proposals', pTitle: 'Who wants to take this on', pSub: 'Meet the teams and pick one, several or none. Only you decide.',
   mEyebrow: 'Team', mTitle: 'Our proposals', mSub: 'See what the business replied. Points arrive once the business confirms a work stage.',
-  score: 'Readiness score', breakdown: 'What it’s made of', raise: 'What will raise the score', growth: 'Score growth', fromDraft: 'points since the draft',
+  score: 'Readiness score', breakdown: 'What it’s made of', raise: 'What will raise the score', growth: 'Score change', fromDraft: 'points since the draft',
   flow: 'End-to-end flow', now: 'now',
   s0: 'Draft', s1: 'Clarify', s2: 'Card', s3: 'Score', s4: 'Catalog', s5: 'Team proposal', s6: 'Business choice', s7: 'Result',
 

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { PenLine, LayoutGrid, Inbox, Send } from 'lucide-react'
 import { scoreCard, words } from '../lib/scoring.js'
 import { analyzeWithFallback, aiStateFromAnalysis, answersAfterDraftChange, cardWithFallback } from '../lib/constructorAI.js'
+import { inferTaskTags } from '../lib/tags.js'
 import {
   SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, SEED_COMPANIES, EMPTY_CARD, MY_COMPANY,
 } from '../data/seed.js'
@@ -311,12 +312,7 @@ export function QadamProvider({ children }) {
     if (!card.title.trim()) { setToast({ tone: 'warn', text: t('toastNeedTitle') }); return }
     if (!confirmed) { setToast({ tone: 'warn', text: t('toastNeedConfirm') }); return }
     const id = `n${Date.now()}`
-    const text = Object.values(card).join(' ')
-    const tags = [
-      ...(/бот|telegram/i.test(text) ? ['Telegram', 'Бот'] : []),
-      ...(/сайт|веб|web|форм|заявк/i.test(text) ? ['Web', 'React'] : []),
-      ...(/данн|аналит|excel|1с|отчёт/i.test(text) ? ['Аналитика'] : []),
-    ]
+    const tags = inferTaskTags(card)
     const companyName = myCompany?.name || MY_COMPANY
     const task = {
       ...card,

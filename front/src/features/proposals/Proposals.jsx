@@ -7,12 +7,13 @@ import { MiniRing } from '../../components/ui/MiniRing.jsx'
 import { Avatar } from '../../components/ui/Avatar.jsx'
 import { StatusChip } from '../../components/ui/StatusChip.jsx'
 import { cx } from '../../lib/cx.js'
+import { resolveProposalTask } from '../../lib/proposalSelection.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
-export function Proposals({ tasks, proposals, teams, milestones, decidingId, onDecide, onMilestone, newTaskId }) {
+export function Proposals({ tasks, proposals, teams, milestones, decidingId, onDecide, onMilestone, newTaskId, requestedTaskId }) {
   const tr = useT()
-  const [tab, setTab] = useState(newTaskId || tasks[0]?.id)
-  const task = tasks.find((x) => x.id === tab) || tasks[0]
+  const [tab, setTab] = useState(() => resolveProposalTask(tasks, requestedTaskId, newTaskId)?.id)
+  const task = resolveProposalTask(tasks, tab, newTaskId)
   const list = proposals.filter((p) => p.taskId === task?.id)
 
   return (

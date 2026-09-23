@@ -9,7 +9,7 @@ import { LevelLadder } from './LevelLadder.jsx'
 
 export function RatingPanel({ live, history, step }) {
   const t = useT()
-  const gaps = live.parts.filter((p) => p.tip).sort((a, b) => (b.weight - b.points) - (a.weight - a.points))
+  const gaps = live.parts.filter((p) => p.tip && p.tipGain > 0).sort((a, b) => b.tipGain - a.tipGain)
   const first = history[0]?.score
   return (
     <>
@@ -54,7 +54,7 @@ export function RatingPanel({ live, history, step }) {
                   <div className="text-xs text-stone-500">{t(`crit_${g.key}`)}</div>
                   <div className="text-sm text-stone-700">{t(g.tip)}</div>
                 </div>
-                <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-600" style={FONT_MONO}>+{g.weight - g.points}</span>
+                <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-orange-600" style={FONT_MONO}>{t('upTo')}{g.tipGain}</span>
               </li>
             ))}
           </ul>
