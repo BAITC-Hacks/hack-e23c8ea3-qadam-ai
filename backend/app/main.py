@@ -66,7 +66,8 @@ async def llm_error(_: Request, exc: llm.LLMError) -> JSONResponse:
 
 @app.exception_handler(Exception)
 async def unexpected_error(_: Request, exc: Exception) -> JSONResponse:
-    log.error("Необработанная ошибка", exc_info=exc)
+    # Exception messages and tracebacks may contain user text, contacts or API keys.
+    log.error("Необработанная ошибка: %s", type(exc).__name__)
     return JSONResponse({"error": "Внутренняя ошибка сервера"}, status_code=500)
 
 
