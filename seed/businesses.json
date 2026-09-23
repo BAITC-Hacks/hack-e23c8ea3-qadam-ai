@@ -1,0 +1,14 @@
+[
+  {
+    "id": "business-bakery",
+    "name": "Демо-пекарня «Тёплый хлеб»"
+  },
+  {
+    "id": "business-retail",
+    "name": "Демо-магазин «Полка»"
+  },
+  {
+    "id": "business-education",
+    "name": "Демо-центр «Учебный круг»"
+  }
+]

@@ -1,0 +1,91 @@
+[
+  {
+    "id": "team-data",
+    "name": "Демо-команда Data Qadam",
+    "interests": [
+      "Общественное питание",
+      "аналитика"
+    ],
+    "skills": [
+      "анализ данных",
+      "прогнозирование"
+    ],
+    "technologies": [
+      "Python",
+      "pandas",
+      "CSV"
+    ],
+    "points": 0
+  },
+  {
+    "id": "team-web",
+    "name": "Демо-команда Web Qadam",
+    "interests": [
+      "Розничная торговля",
+      "Общественное питание"
+    ],
+    "skills": [
+      "веб-разработка",
+      "интерфейсы"
+    ],
+    "technologies": [
+      "React",
+      "TypeScript",
+      "FastAPI"
+    ],
+    "points": 0
+  },
+  {
+    "id": "team-edu",
+    "name": "Демо-команда Edu Qadam",
+    "interests": [
+      "Образование",
+      "автоматизация"
+    ],
+    "skills": [
+      "обработка таблиц",
+      "тестирование"
+    ],
+    "technologies": [
+      "Python",
+      "CSV",
+      "pytest"
+    ],
+    "points": 0
+  },
+  {
+    "id": "team-flow",
+    "name": "Демо-команда Flow Qadam",
+    "interests": [
+      "Логистика",
+      "планирование"
+    ],
+    "skills": [
+      "оптимизация",
+      "визуализация"
+    ],
+    "technologies": [
+      "Python",
+      "React"
+    ],
+    "points": 0
+  },
+  {
+    "id": "team-sheet",
+    "name": "Демо-команда Sheet Qadam",
+    "interests": [
+      "Розничная торговля",
+      "отчётность"
+    ],
+    "skills": [
+      "анализ остатков",
+      "обработка Excel"
+    ],
+    "technologies": [
+      "Python",
+      "Excel",
+      "pandas"
+    ],
+    "points": 0
+  }
+]

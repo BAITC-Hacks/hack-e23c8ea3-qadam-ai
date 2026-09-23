@@ -1,0 +1,57 @@
+[
+  {
+    "id": "proposal-bakery-data",
+    "task_id": "task-bakery",
+    "team_id": "team-data",
+    "idea": "Построим таблицу рекомендаций на основе продаж и списаний по дням.",
+    "plan": "Проверим структуру данных, подготовим базовые расчёты, сравним результаты с ручным подсчётом.",
+    "deadline": "Прототип через 7 дней после получения данных.",
+    "link": "https://example.com/prototypes/bakery-data",
+    "status": "pending",
+    "created_at": "2026-09-23T08:00:00Z"
+  },
+  {
+    "id": "proposal-bakery-web",
+    "task_id": "task-bakery",
+    "team_id": "team-web",
+    "idea": "Сделаем веб-интерфейс загрузки таблицы и просмотра рекомендаций по выпечке.",
+    "plan": "Согласуем формат таблицы, реализуем загрузку и расчёт, покажем результат владельцу.",
+    "deadline": "Прототип через 10 дней после получения данных.",
+    "link": "https://example.com/prototypes/bakery-web",
+    "status": "pending",
+    "created_at": "2026-09-23T08:05:00Z"
+  },
+  {
+    "id": "proposal-reports",
+    "task_id": "task-reports",
+    "team_id": "team-edu",
+    "idea": "Сделаем локальный инструмент формирования недельного отчёта из CSV.",
+    "plan": "Проверим входной CSV, реализуем агрегацию, проверим число заявок и время работы.",
+    "deadline": "За 14 дней после начала работы.",
+    "link": "https://example.com/prototypes/reports",
+    "status": "accepted",
+    "created_at": "2026-09-23T08:10:00Z"
+  },
+  {
+    "id": "proposal-delivery",
+    "task_id": "task-delivery",
+    "team_id": "team-flow",
+    "idea": "Сделаем таблицу распределения заказов по курьерам с ручной корректировкой.",
+    "plan": "Изучим синтетические заказы, добавим распределение по районам, проверим редактирование.",
+    "deadline": "За 8 дней после согласования формата.",
+    "link": "https://example.com/prototypes/delivery",
+    "status": "pending",
+    "created_at": "2026-09-23T08:15:00Z"
+  },
+  {
+    "id": "proposal-stock",
+    "task_id": "task-stock",
+    "team_id": "team-sheet",
+    "idea": "Подготовим отчёт по остаткам с загрузкой исходных файлов Excel.",
+    "plan": "Согласуем столбцы, объединим файлы, проверим сводку вместе с менеджером.",
+    "deadline": "За 14 дней после предоставления файлов.",
+    "link": "https://example.com/prototypes/stock",
+    "status": "rejected",
+    "created_at": "2026-09-23T08:20:00Z"
+  }
+]
