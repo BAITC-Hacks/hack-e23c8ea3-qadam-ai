@@ -8,7 +8,7 @@ import { Block } from './Block.jsx'
 export function AIModal({ ai, draft, onClose }) {
   const t = useT()
   const sampleDraft = draft || SEED_DRAFTS[0].text
-  const out = ai ? JSON.parse(ai.raw) : analyzeDraft(sampleDraft)
+  const out = ai?.data || analyzeDraft(sampleDraft)
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-6">
       <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" onClick={onClose} />
@@ -21,8 +21,10 @@ export function AIModal({ ai, draft, onClose }) {
           <button type="button" onClick={onClose} aria-label={t('close')} className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100"><X className="size-4" /></button>
         </div>
         <div className="mt-5 space-y-4">
-          <Block title={t('aiPrompt')}>{AI_PROMPT}</Block>
-          <Block title={t('aiIn')}>{JSON.stringify({ draft: sampleDraft }, null, 2)}</Block>
+          {ai?.source === 'ai'
+            ? <p className="rounded-xl bg-orange-50 p-3 text-sm text-stone-700">{t('aiBackendPrompt')}</p>
+            : <Block title={t('aiLocalPrompt')}>{AI_PROMPT}</Block>}
+          <Block title={t('aiIn')}>{JSON.stringify(ai?.input || { draft: sampleDraft }, null, 2)}</Block>
           <Block title={t('aiOut')}>{JSON.stringify(out, null, 2)}</Block>
           <div className="grid gap-2 sm:grid-cols-3">
             {[

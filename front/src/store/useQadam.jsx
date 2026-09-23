@@ -1,12 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { PenLine, LayoutGrid, Inbox, Send } from 'lucide-react'
 import { scoreCard, words } from '../lib/scoring.js'
-import { analyzeDraft, validateAIResponse } from '../lib/ai.js'
+import { analyzeWithFallback, cardWithFallback } from '../lib/constructorAI.js'
 import { SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, EMPTY_CARD, MY_COMPANY } from '../data/seed.js'
 import { useT } from '../i18n/LangContext.jsx'
 
 const QadamCtx = createContext(null)
 export const useQadam = () => useContext(QadamCtx)
+
+// oxlint-disable-next-line react/only-export-components
+export function answersAfterDraftChange(previousDraft, nextDraft, currentAnswers) {
+  return previousDraft === nextDraft ? currentAnswers : {}
+}
 
 export function QadamProvider({ children }) {
   const t = useT()
@@ -21,18 +26,38 @@ export function QadamProvider({ children }) {
   const [aiModal, setAiModal] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const [step, setStep] = useState(1)
-  const [draft, setDraft] = useState('')
-  const [industry, setIndustry] = useState('Услуги')
+  const [step, setStepState] = useState(1)
+  const [draft, setDraftState] = useState('')
+  const [industry, setIndustryState] = useState('Услуги')
   const [ai, setAi] = useState(null)
   const [thinking, setThinking] = useState(false)
-  const [answers, setAnswers] = useState({})
+  const [answers, setAnswersState] = useState({})
   const [card, setCard] = useState(EMPTY_CARD)
   const [confirmed, setConfirmed] = useState(false)
   const [history, setHistory] = useState([])
   const [newTaskId, setNewTaskId] = useState(null)
   const [growth, setGrowth] = useState([])
   const [milestones, setMilestones] = useState({})
+  const requestRef = useRef(null)
+  const requestIdRef = useRef(0)
+
+  const cancelPending = useCallback(() => {
+    requestIdRef.current += 1
+    requestRef.current?.abort()
+    requestRef.current = null
+    setThinking(false)
+  }, [])
+  const setDraft = useCallback((value) => {
+    cancelPending()
+    setAi(null)
+    setAnswersState((current) => answersAfterDraftChange(draft, value, current))
+    setDraftState(value)
+  }, [cancelPending, draft])
+  const setIndustry = useCallback((value) => { cancelPending(); setAi(null); setIndustryState(value) }, [cancelPending])
+  const setAnswers = useCallback((value) => { cancelPending(); setAnswersState(value) }, [cancelPending])
+  const setStep = useCallback((value) => { cancelPending(); setStepState(value) }, [cancelPending])
+
+  useEffect(() => () => { requestRef.current?.abort(); requestRef.current = null }, [])
 
   useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 3200); return () => clearTimeout(id) }, [toast])
 
@@ -65,30 +90,61 @@ export function QadamProvider({ children }) {
   ]
   const currentStep = done.findIndex((d) => !d)
 
-  const runAnalysis = useCallback(() => {
+  const runAnalysis = useCallback(async () => {
+    if (requestRef.current) return
     if (words(draft) < 3) { setToast({ tone: 'warn', text: t('toastShortDraft') }); return }
+    const id = ++requestIdRef.current
+    const controller = new AbortController()
+    requestRef.current = controller
     setThinking(true)
-    setTimeout(() => {
-      const raw = JSON.stringify(analyzeDraft(draft))
-      const v = validateAIResponse(raw)
-      setAi({ raw, valid: v.ok, data: v.data })
-      setAnswers({})
+    try {
+      let data
+      try {
+        data = await analyzeWithFallback({ draft, industry }, { signal: controller.signal })
+      } catch (error) {
+        if (id !== requestIdRef.current || error?.kind === 'aborted') return
+        if (error?.kind === 'http' && error.status === 422) {
+          setToast({ tone: 'warn', text: error.message })
+          return
+        }
+        return
+      }
+      if (id !== requestIdRef.current) return
+      setAi({ data, source: data.source, raw: JSON.stringify(data), input: { draft, industry }, card: null })
       setHistory([{ labelKey: 'hist_draft', score: scoreCard({ ...EMPTY_CARD, context: draft }).total }])
-      setThinking(false)
-      setStep(2)
-    }, 1100)
-  }, [draft, t])
+      setStepState(2)
+    } finally {
+      if (id === requestIdRef.current) { requestRef.current = null; setThinking(false) }
+    }
+  }, [draft, industry, t])
 
-  const buildCard = useCallback(() => {
-    const c = { ...EMPTY_CARD, industry, context: draft.trim() }
-    Object.entries(answers).forEach(([f, v]) => { if (v.trim()) c[f] = v.trim() })
-    const first = draft.trim().split(/[.!?\n]/)[0]
-    c.title = first.length > 70 ? first.slice(0, 67) + '…' : first
-    c.title = c.title.charAt(0).toUpperCase() + c.title.slice(1)
-    setCard(c)
-    setHistory((h) => [...h.slice(0, 1), { labelKey: 'hist_answers', score: scoreCard(c).total }])
-    setConfirmed(false)
-    setStep(3)
+  const buildCard = useCallback(async () => {
+    if (requestRef.current) return
+    const id = ++requestIdRef.current
+    const controller = new AbortController()
+    requestRef.current = controller
+    setThinking(true)
+    try {
+      let result
+      try {
+        result = await cardWithFallback({ draft, industry, answers }, { signal: controller.signal })
+      } catch (error) {
+        if (id !== requestIdRef.current || error?.kind === 'aborted') return
+        if (error?.kind === 'http' && error.status === 422) {
+          setToast({ tone: 'warn', text: error.message })
+          return
+        }
+        return
+      }
+      if (id !== requestIdRef.current) return
+      setCard(result.card)
+      setAi((current) => current && { ...current, card: { source: result.source, warnings: result.warnings } })
+      setHistory((h) => [...h.slice(0, 1), { labelKey: 'hist_answers', score: scoreCard(result.card).total }])
+      setConfirmed(false)
+      setStepState(3)
+    } finally {
+      if (id === requestIdRef.current) { requestRef.current = null; setThinking(false) }
+    }
   }, [industry, draft, answers])
 
   const publish = useCallback(() => {
@@ -104,17 +160,17 @@ export function QadamProvider({ children }) {
     const task = { ...card, id, company: MY_COMPANY, owner: true, tags: tags.length ? tags : ['Web'], createdAt: 10, isNew: true }
     const s = scoreCard(card).total
     setGrowth([...history.slice(0, 2), { labelKey: 'hist_publish', score: s }])
-    setStep(1); setDraft(''); setAi(null); setAnswers({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
+    cancelPending(); setStepState(1); setDraftState(''); setAi(null); setAnswersState({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
     setTasks((ts) => [...ts.map((x) => ({ ...x, isNew: false })), task])
     setNewTaskId(id)
     const pos = [...scored, { ...task, score: s }].sort((a, b) => b.score - a.score || b.createdAt - a.createdAt).findIndex((x) => x.id === id) + 1
     setToast({ tone: 'ok', text: t('toastPublished', { n: pos }) })
     setView('catalog')
-  }, [card, confirmed, history, scored, t])
+  }, [card, confirmed, history, scored, t, cancelPending])
 
   const resetBuilder = useCallback(() => {
-    setStep(1); setDraft(''); setAi(null); setAnswers({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
-  }, [])
+    cancelPending(); setStepState(1); setDraftState(''); setAi(null); setAnswersState({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
+  }, [cancelPending])
 
   const resetDemo = useCallback(() => {
     resetBuilder(); setTasks(SEED_TASKS); setProposals(SEED_PROPOSALS); setTeams(SEED_TEAMS); setNewTaskId(null); setMilestones({}); setGrowth([])

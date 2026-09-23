@@ -7,6 +7,7 @@ import { Field } from '../../components/ui/Field.jsx'
 import { LevelChip } from '../../components/ui/LevelChip.jsx'
 import { inputCls } from '../../components/ui/inputCls.js'
 import { cx } from '../../lib/cx.js'
+import { QUESTION_BANK } from '../../lib/ai.js'
 import { words, FONT_MONO, CRITERIA, CARD_FIELDS } from '../../lib/scoring.js'
 import { INDUSTRIES, SEED_DRAFTS } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
@@ -16,6 +17,7 @@ export function Builder(p) {
   const t = useT()
   const steps = [t('step1'), t('step2'), t('step3')]
   const answered = ai ? ai.data.questions.filter((q) => (answers[q.field] || '').trim()).length : 0
+  const updateCard = (field, value) => { setCard({ ...card, [field]: value }); setConfirmed(false) }
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -27,7 +29,7 @@ export function Builder(p) {
           const state = step > n ? 'done' : step === n ? 'active' : 'todo'
           return (
             <li key={s} className="flex flex-1 items-center gap-2">
-              <button type="button" disabled={n > step} onClick={() => setStep(n)}
+              <button type="button" disabled={n > step && !(n === 2 && ai)} onClick={() => setStep(n)}
                 className={cx('flex min-w-0 items-center gap-2 text-xs font-medium transition', state === 'todo' ? 'text-stone-400' : state === 'active' ? 'text-stone-900' : 'text-stone-500 hover:text-stone-900')}>
                 <span className={cx('grid size-6 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums',
                   state === 'done' ? 'border-orange-300 bg-orange-100 text-orange-600' : state === 'active' ? 'border-orange-500 text-orange-600' : 'border-stone-300')}>
@@ -68,9 +70,12 @@ export function Builder(p) {
                   {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
                 </select>
               </div>
-              <Button variant="primary" size="lg" onClick={runAnalysis} disabled={thinking || !draft.trim()} className="w-full sm:w-auto">
-                {thinking ? <><LoaderCircle className="size-4 animate-spin" /> {t('reading')}</> : <><Sparkles className="size-4" /> {t('goAssistant')}</>}
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {ai && <Button variant="quiet" onClick={() => setStep(2)} disabled={thinking}>{t('backToQuestions')}</Button>}
+                <Button variant="primary" size="lg" onClick={runAnalysis} disabled={thinking || !draft.trim()} className="w-full sm:w-auto">
+                  {thinking ? <><LoaderCircle className="size-4 animate-spin" /> {t('reading')}</> : <><Sparkles className="size-4" /> {t('goAssistant')}</>}
+                </Button>
+              </div>
             </div>
           </Panel>
 
@@ -101,6 +106,7 @@ export function Builder(p) {
           </div>
 
           <AssistantBubble>
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-orange-700">{t(ai.source === 'ai' ? 'aiSourceAI' : 'aiSourceStub')}</p>
             <AssistantIntro n={ai.data.missing.length} />
             <div className="mt-3 flex flex-wrap gap-1.5">
               {CRITERIA.map((c) => {
@@ -112,7 +118,7 @@ export function Builder(p) {
                 )
               })}
             </div>
-            {!ai.valid && <p className="mt-3 text-xs text-amber-800">{t('aiFallback')}</p>}
+            {ai.source === 'stub' && <p className="mt-3 text-xs text-amber-800" role="status">{t('aiFallback')}</p>}
           </AssistantBubble>
 
           {ai.data.questions.map((q, i) => {
@@ -122,7 +128,7 @@ export function Builder(p) {
             return (
               <div key={q.field} className="q-in space-y-2.5" style={{ animationDelay: `${i * 80}ms` }}>
                 <AssistantBubble compact>
-                  <p className="text-[15px] text-stone-900">{t(`ask_${q.field}${q.refine ? '_refine' : ''}`)}</p>
+                  <p className="text-[15px] text-stone-900">{ai.source === 'ai' ? q.text : t(`ask_${q.field}${ai.data.detected[q.field] && QUESTION_BANK[q.field]?.refine ? '_refine' : ''}`)}</p>
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-stone-500">
                     <crit.icon className="size-3.5" />{t(`crit_${crit.key}`)}
                     <span className={cx('ml-1 rounded-full px-2 py-0.5 font-semibold tabular-nums', filled ? 'bg-orange-100 text-orange-700' : 'bg-stone-100 text-stone-500')}>{t('upTo')}{crit.weight}</span>
@@ -143,8 +149,8 @@ export function Builder(p) {
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="quiet" onClick={() => setStep(1)}><ArrowLeft className="size-4" /> {t('editDraft')}</Button>
-            <Button variant="primary" size="lg" onClick={buildCard}>
-              <WandSparkles className="size-4" /> {t('buildCard')} <span className="text-white/60">· {answered}/{ai.data.questions.length}</span>
+            <Button variant="primary" size="lg" onClick={buildCard} disabled={thinking}>
+              {thinking ? <LoaderCircle className="size-4 animate-spin" /> : <WandSparkles className="size-4" />} {thinking ? t('buildingCard') : t('buildCard')} <span className="text-white/60">· {answered}/{ai.data.questions.length}</span>
             </Button>
           </div>
         </div>
@@ -157,13 +163,23 @@ export function Builder(p) {
             {t('cardBanner')}
           </div>
 
+          {ai?.card && <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">{t(ai.card.source === 'ai' ? 'aiSourceAI' : 'aiSourceStub')}</p>}
+
+          {ai?.card?.source === 'stub' && <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">{t('cardFallback')}</div>}
+          {!!ai?.card?.warnings?.length && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-medium">{t('cardWarnings')}</p>
+              <ul className="mt-1 list-disc space-y-1 pl-5">{ai.card.warnings.map((warning, i) => <li key={i}>{warning}</li>)}</ul>
+            </div>
+          )}
+
           <Panel className="p-4 sm:p-6">
             <div className="grid gap-4 sm:grid-cols-[1fr_180px]">
               <Field label={t('titleLabel')}>
-                <input id="card-title" value={card.title} onChange={(e) => setCard({ ...card, title: e.target.value })} className={cx(inputCls, 'text-base font-medium')} />
+                <input id="card-title" value={card.title} onChange={(e) => updateCard('title', e.target.value)} className={cx(inputCls, 'text-base font-medium')} />
               </Field>
               <Field label={t('industry')}>
-                <select id="card-industry" value={card.industry} onChange={(e) => setCard({ ...card, industry: e.target.value })} className={inputCls}>
+                <select id="card-industry" value={card.industry} onChange={(e) => updateCard('industry', e.target.value)} className={inputCls}>
                   {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
                 </select>
               </Field>
@@ -183,7 +199,7 @@ export function Builder(p) {
                       </span>
                     }>
                       <textarea id={`card-${f.key}`} rows={wide ? 3 : 2} value={card[f.key]} placeholder={t(`field_${f.key}_ph`)}
-                        onChange={(e) => setCard({ ...card, [f.key]: e.target.value })}
+                        onChange={(e) => updateCard(f.key, e.target.value)}
                         className={cx(inputCls, 'resize-y', !card[f.key].trim() && 'border-dashed')} />
                     </Field>
                   </div>
