@@ -1,5 +1,6 @@
 export default {
   themeLight: 'Ашық тақырып', themeDark: 'Қараңғы тақырып',
+  theme: 'Тақырып', themeOptLight: 'Ашық', themeOptDark: 'Қараңғы', themeOptSystem: 'Жүйе',
   tagline: 'бизнес пен студенттер — бір-біріне бір қадам', business: 'Бизнес', students: 'Студенттер', youTeam: 'Сіздің командаңыз',
   navNew: 'Жаңа тапсырма', navCatalog: 'Каталог', navInbox: 'Өтінімдер', navMine: 'Біздің өтінімдер',
   howAI: 'AI қалай жұмыс істейді', reset: 'Демоны қайта бастау', language: 'Тіл', menu: 'Мәзір',
@@ -58,6 +59,7 @@ export default {
   recsLead: 'Көмекші ұсынады',
   recsHint: 'сіздің дағдыларыңыз бойынша; қалған тапсырмалар да ашық',
   matches: 'сәйкестік',
+  matches_one: 'сәйкестік', matches_other: 'сәйкестік',
   searchPh: 'Тапсырмалар мен компаниялар бойынша іздеу',
   tasksByScore: 'тапсырма · рейтинг бойынша',
   badgeNew: 'Жаңа',

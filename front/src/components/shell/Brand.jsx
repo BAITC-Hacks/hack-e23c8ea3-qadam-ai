@@ -11,7 +11,7 @@ export function Brand({ compact }) {
         </svg>
       </div>
       <div className="leading-tight">
-        <div className="text-[15px] text-stone-900" style={{ ...FONT_DISPLAY, fontWeight: 600 }}>Qadam<span className="text-orange-600"> AI</span></div>
+        <div className="whitespace-nowrap text-[15px] text-stone-900" style={{ ...FONT_DISPLAY, fontWeight: 600 }}>Qadam<span className="text-orange-600"> AI</span></div>
         {!compact && <div className="text-[11px] text-stone-500">{t('tagline')}</div>}
       </div>
     </div>

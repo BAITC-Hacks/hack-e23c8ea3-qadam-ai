@@ -1,5 +1,6 @@
 export default {
   themeLight: 'Светлая тема', themeDark: 'Тёмная тема',
+  theme: 'Тема', themeOptLight: 'Светлая', themeOptDark: 'Тёмная', themeOptSystem: 'Система',
   tagline: 'бизнес и студенты — шаг навстречу', business: 'Бизнес', students: 'Студенты', youTeam: 'Вы — команда',
   navNew: 'Новая задача', navCatalog: 'Каталог', navInbox: 'Отклики', navMine: 'Наши отклики',
   howAI: 'Как работает AI', reset: 'Сбросить демо', language: 'Язык', menu: 'Меню',
@@ -58,6 +59,7 @@ export default {
   recsLead: 'Помощник советует',
   recsHint: 'по вашим навыкам; остальные задачи тоже открыты',
   matches: 'совпадения',
+  matches_one: 'совпадение', matches_few: 'совпадения', matches_many: 'совпадений', matches_other: 'совпадения',
   searchPh: 'Поиск по задачам и компаниям',
   tasksByScore: 'задач · по рейтингу',
   badgeNew: 'Новая',
