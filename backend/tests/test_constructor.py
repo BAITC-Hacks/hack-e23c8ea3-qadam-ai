@@ -516,6 +516,64 @@ def test_phone_round_trip_through_card_route_and_sdk(client, monkeypatch, phone)
     assert "[phone]" not in sent
 
 
+@pytest.mark.parametrize("field", ["data", "need", "users", "constraints", "result", "criteria"])
+def test_contact_in_other_answer_reaches_contact_through_sdk(client, monkeypatch, field):
+    contact = "qa-owner@example.com"
+    answer = f"CSV пришлет {contact} после согласования доступа."
+    monkeypatch.setattr(llm, "ai_available", lambda: True)
+
+    def complete(**kwargs):
+        payload = json.loads(kwargs["messages"][1]["content"])
+        result = built_card()
+        result["card"][field] = payload["answers"][field]
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(
+            parsed=kwargs["response_format"].model_validate(result), refusal=None,
+        ))])
+
+    parse = Mock(side_effect=complete)
+    sdk = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(parse=parse)))
+    monkeypatch.setattr(llm, "_get_client", lambda: sdk)
+    response = client.post("/api/constructor/card", json={
+        "draft": "Нужен отчет по продажам.", "answers": {field: answer},
+    })
+
+    assert response.status_code == 200
+    parse.assert_called_once()
+    result = response.json()
+    assert result["card"][field] == answer
+    assert result["card"]["contact"] == contact
+    assert not any(w.startswith("contact:") for w in result["warnings"])
+    sent = parse.call_args.kwargs["messages"][1]["content"]
+    assert contact not in sent
+    assert "[[QADAM_CONTACT_" in sent
+    assert "contact" not in json.loads(sent)["answers"]
+
+
+@pytest.mark.parametrize("explicit", ["", "Не знаю", "Только direct@example.com"])
+def test_contact_fallback_combines_draft_and_answers_but_respects_explicit(client, provider, explicit):
+    provider[0].append(built_card())
+    response = client.post("/api/constructor/card", json={
+        "draft": "Нужен отчет по продажам. Связь: draft@example.com.",
+        "industry": "Услуги industry@example.com",
+        "answers": {
+            "data": "CSV пришлет qa-owner@example.com; копия draft@example.com.",
+            "users": "Вопросы qa-owner@example.com или +7.700.000.00.00.",
+            "contact": explicit,
+        },
+    })
+    assert response.status_code == 200
+    expected = "draft@example.com; qa-owner@example.com; +7.700.000.00.00"
+    assert response.json()["card"]["contact"] == (
+        explicit if explicit == "Только direct@example.com" else expected
+    )
+    sent = json.loads(provider[1].call_args.args[0])
+    assert "contact" not in sent["answers"]
+    assert "direct@example.com" not in json.dumps(sent)
+    assert not any(
+        w.startswith("contact: сведения не уточнены") for w in response.json()["warnings"]
+    )
+
+
 def test_invented_unicode_contact_rejected(client, provider):
     invalid = built_card()
     invalid["warnings"] = ["contact: invented@пример.рф"]

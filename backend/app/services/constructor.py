@@ -278,16 +278,18 @@ def build_card(request: BuildCardRequest) -> BuildCardResponse:
     _ensure_ai_available()
     mask = ContactMask()
     draft = mask.redact(request.draft)
-    original_contacts = list(mask.values.values())
-    contact = _text(request.answers.get("contact")) or "; ".join(original_contacts)
+    answers = {
+        field: mask.redact(answer)
+        for field, answer in request.answers.items()
+        if field != "contact"
+    }
+    # Явный контакт приоритетнее; иначе собираем каналы из черновика и всех
+    # ответов до маскировки industry. ContactMask уже исключает повторы.
+    contact = _text(request.answers.get("contact")) or "; ".join(mask.values.values())
     payload = {
         "draft": draft,
         "industry": mask.redact(request.industry),
-        "answers": {
-            field: mask.redact(answer)
-            for field, answer in request.answers.items()
-            if field != "contact"
-        },
+        "answers": answers,
     }
     result = _ask("card", payload, ModelBuild, mask)
     _check_scope(result.intent, building=True)
