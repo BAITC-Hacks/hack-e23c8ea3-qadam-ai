@@ -1,4 +1,4 @@
-"""Ручной прогон пяти синтетических примеров через реальный провайдер.
+"""Ручной прогон синтетических примеров через реальный провайдер.
 
 Из backend: .venv/bin/python -m tests.manual_constructor --live > /tmp/qadam-ai-review.json
 Требует настроенного локального окружения. Не запускается автоматически через pytest.
@@ -16,6 +16,10 @@ from app.services.constructor import analyze, build_card
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--suite", choices=["quality", "security"], default="quality",
+        help="Пять примеров качества или пять примеров безопасности",
+    )
+    parser.add_argument(
         "--live",
         action="store_true",
         help="Разрешить реальные запросы к настроенному AI API",
@@ -27,10 +31,9 @@ def main():
         parser.error(
             "ИИ недоступен: настройте ключ, модель и AI_MODE=auto локально; не передавайте ключ в командной строке"
         )
-    cases = json.loads(
-        (Path(__file__).parent / "fixtures/constructor_cases.json").read_text()
-    )
-    report = {"model": llm.model_name(), "cases": []}
+    fixture = "constructor_security_cases.json" if args.suite == "security" else "constructor_cases.json"
+    cases = json.loads((Path(__file__).parent / "fixtures" / fixture).read_text())
+    report = {"model": llm.model_name(), "suite": args.suite, "cases": []}
     for case in cases:
         item = {"id": case["id"], "review": case["review"]}
         for operation, request, call in [

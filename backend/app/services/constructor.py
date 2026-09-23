@@ -102,64 +102,84 @@ class ModelBuild(StrictModel):
 
 # Ограниченная маскировка, не полноценное распознавание персональных данных.
 CONTACT_PATTERN = re.compile(
-    r"[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}"
+    # Не начинаем поиск заново с каждого суффикса длинного слова.
+    # Possessive-квантификаторы доступны в поддерживаемом Python 3.11+.
+    r"(?<![\w.+%@-])[\w.+%-]++@[\w-]++(?:\.[\w-]++)+"
     r"|(?:https?://)?t\.me/[A-Za-z0-9_]+"
     r"|(?<!\w)@[A-Za-z][A-Za-z0-9_]{2,}"
-    r"|(?<!\w)\+?\d[\d ()-]{5,}\d(?!\w)",
+    # Поглощаем весь числовой кандидат даже при неверной длине, без перебора
+    # его суффиксов. Отделяющие пробелы/скобки вернём неизменёнными.
+    r"|(?P<phone>(?<![\w+])\+?\d[\d ()-]*+)",
     re.IGNORECASE,
 )
+CONTACT_TOKEN = re.compile(r"\[\[QADAM_CONTACT_[^\[\]\s]*\]\]")
+DATE_PREFIX = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})(?:$|[ ()])")
 
 
-def _is_contact(value: str) -> bool:
-    if "@" in value or "t.me/" in value.lower():
-        return True
-    return 10 <= sum(char.isdigit() for char in value) <= 15
+def _contact_value(match: re.Match[str]) -> str:
+    if match.group("phone") is None:
+        return match.group()
+    value = match.group().rstrip(" ()-")
+    if DATE_PREFIX.match(value):
+        return ""
+    # Не выделяем телефон внутри идентификатора вида 77000000000abc.
+    if match.end() < len(match.string) and match.group() == value:
+        following = match.string[match.end()]
+        if following.isalnum() or following == "_":
+            return ""
+    return value if 10 <= sum(char.isdigit() for char in value) <= 15 else ""
 
 
 class ContactMask:
     def __init__(self):
         self.prefix = f"[[QADAM_CONTACT_{secrets.token_hex(4)}_"
         self.values: dict[str, str] = {}
+        self._tokens: dict[str, str] = {}
 
     def redact(self, text: str) -> str:
         def replace(match):
-            value = match.group(0)
-            if not _is_contact(value):
-                return value
-            for token, original in self.values.items():
-                if original == value:
-                    return token
-            token = f"{self.prefix}{len(self.values) + 1}]]"
-            self.values[token] = value
-            return token
+            value = _contact_value(match)
+            if not value:
+                return match.group()
+            token = self._tokens.get(value)
+            if token is None:
+                token = f"{self.prefix}{len(self.values) + 1}]]"
+                self.values[token] = value
+                self._tokens[value] = token
+            return token + match.group()[len(value):]
 
         return CONTACT_PATTERN.sub(replace, text)
 
     def restore(self, text: str) -> str:
-        for token, value in self.values.items():
-            text = text.replace(token, value)
-        return text
+        return CONTACT_TOKEN.sub(lambda m: self.values.get(m.group(), m.group()), text)
+
+    def hide(self, text: str) -> str:
+        return CONTACT_TOKEN.sub(
+            lambda m: "[контакт скрыт]" if m.group() in self.values else m.group(),
+            text,
+        )
 
     def check_output(self, result: BaseModel) -> None:
         text = result.model_dump_json()
         # Модель может повторить выданный токен, но не придумать контакт или токен.
         for match in CONTACT_PATTERN.finditer(text):
-            if _is_contact(match.group(0)):
+            if _contact_value(match):
                 raise ValueError("model output contains an unmasked contact")
-        for token in self.values:
-            text = text.replace(token, "")
-        if "[[QADAM_CONTACT_" in text:
+        if "[[QADAM_CONTACT_" in self.hide(text):
             raise ValueError("model output contains an unknown contact token")
 
 
 T = TypeVar("T", bound=BaseModel)
 
 
-def _ask(name: str, payload: dict, schema: type[T], mask: ContactMask) -> T:
+def _ensure_ai_available() -> None:
     if not llm.ai_available():
         raise llm.LLMError(
             "ИИ недоступен. Используйте локальную заглушку или ручное заполнение."
         )
+
+
+def _ask(name: str, payload: dict, schema: type[T], mask: ContactMask) -> T:
     system = llm.load_prompt(name)
     prompt = json.dumps(payload, ensure_ascii=False)
     for attempt in range(2):
@@ -182,6 +202,7 @@ def _ask(name: str, payload: dict, schema: type[T], mask: ContactMask) -> T:
 
 
 def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+    _ensure_ai_available()
     mask = ContactMask()
     payload = {
         "draft": mask.redact(request.draft),
@@ -198,6 +219,7 @@ def _text(value: str | None) -> str:
 
 
 def build_card(request: BuildCardRequest) -> BuildCardResponse:
+    _ensure_ai_available()
     mask = ContactMask()
     draft = mask.redact(request.draft)
     original_contacts = list(mask.values.values())
@@ -222,10 +244,7 @@ def build_card(request: BuildCardRequest) -> BuildCardResponse:
         dict.fromkeys(warning.strip() for warning in result.warnings if warning.strip())
     )
     # Предупреждения не должны раскрывать замаскированные контакты.
-    for i, warning in enumerate(warnings):
-        for token in mask.values:
-            warning = warning.replace(token, "[контакт скрыт]")
-        warnings[i] = warning
+    warnings = [mask.hide(warning) for warning in warnings]
     for field, value in values.items():
         if (
             field != "industry"
