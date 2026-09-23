@@ -12,13 +12,10 @@ from pydantic import BaseModel, field_validator
 QuestionField = Literal["need", "users", "data", "constraints", "result", "criteria", "contact"]
 Source = Literal["ai", "stub"]
 
-DRAFT_MIN_WORDS = 3
-
-
 def _check_draft(value: str) -> str:
     value = value.strip()
-    if len(value.split()) < DRAFT_MIN_WORDS:
-        raise ValueError(f"Черновик должен содержать хотя бы {DRAFT_MIN_WORDS} слова")
+    if not value:
+        raise ValueError("Напишите бизнес-идею или задачу")
     return value
 
 

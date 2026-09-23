@@ -111,7 +111,7 @@ export default {
   aiRule2t: 'Invalid response', aiRule2d: 'JSON without 3+ questions → template questions',
   aiRule3t: 'A person decides', aiRule3d: 'Publishing and team selection are manual only',
 
-  toastShortDraft: 'Describe the task in at least three words',
+  toastShortDraft: 'Describe your business idea or task',
   toastNeedTitle: 'Add a task title',
   toastNeedConfirm: 'Confirm the card before publishing',
   toastPublished: 'Published · position #{n} in the catalog',

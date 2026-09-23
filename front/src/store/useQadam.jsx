@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { PenLine, LayoutGrid, Inbox, Send } from 'lucide-react'
-import { scoreCard, words } from '../lib/scoring.js'
-import { analyzeWithFallback, aiStateFromAnalysis, answersAfterDraftChange, cardWithFallback } from '../lib/constructorAI.js'
+import { scoreCard } from '../lib/scoring.js'
+import { analyzeWithAI, aiStateFromAnalysis, answersAfterDraftChange, cardWithAI } from '../lib/constructorAI.js'
 import { inferTaskTags } from '../lib/tags.js'
 import {
   SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, SEED_COMPANIES, EMPTY_CARD, MY_COMPANY,
@@ -97,6 +97,7 @@ export function QadamProvider({ children }) {
   const [industry, setIndustryState] = useState(typeof b0?.industry === 'string' ? b0.industry : 'Услуги')
   const [ai, setAi] = useState(() => (b0?.ai && typeof b0.ai === 'object' && Array.isArray(b0.ai?.data?.questions) ? b0.ai : null))
   const [thinking, setThinking] = useState(false)
+  const [aiMessage, setAiMessage] = useState('')
   const [answers, setAnswersState] = useState(b0?.answers && typeof b0.answers === 'object' ? b0.answers : {})
   const [card, setCard] = useState(() => {
     if (!b0?.card || typeof b0.card !== 'object') return EMPTY_CARD
@@ -123,6 +124,7 @@ export function QadamProvider({ children }) {
     requestRef.current?.abort()
     requestRef.current = null
     setThinking(false)
+    setAiMessage('')
   }, [])
   const setDraft = useCallback((value) => {
     cancelPending()
@@ -253,21 +255,21 @@ export function QadamProvider({ children }) {
 
   const runAnalysis = useCallback(async () => {
     if (requestRef.current) return
-    if (words(draft) < 3) { setToast({ tone: 'warn', text: t('toastShortDraft') }); return }
+    if (!draft.trim()) { setAiMessage(t('toastShortDraft')); return }
     const id = ++requestIdRef.current
     const controller = new AbortController()
     requestRef.current = controller
     setThinking(true)
+    setAiMessage('')
+    setAi(null)
+    setConfirmed(false)
     try {
       let data
       try {
-        data = await analyzeWithFallback({ draft, industry }, { signal: controller.signal })
+        data = await analyzeWithAI({ draft, industry }, { signal: controller.signal })
       } catch (error) {
         if (id !== requestIdRef.current || error?.kind === 'aborted') return
-        if (error?.kind === 'http' && error.status === 422) {
-          setToast({ tone: 'warn', text: error.message })
-          return
-        }
+        setAiMessage(error.message)
         return
       }
       if (id !== requestIdRef.current) return
@@ -285,16 +287,15 @@ export function QadamProvider({ children }) {
     const controller = new AbortController()
     requestRef.current = controller
     setThinking(true)
+    setAiMessage('')
+    setConfirmed(false)
     try {
       let result
       try {
-        result = await cardWithFallback({ draft, industry, answers }, { signal: controller.signal })
+        result = await cardWithAI({ draft, industry, answers }, { signal: controller.signal })
       } catch (error) {
         if (id !== requestIdRef.current || error?.kind === 'aborted') return
-        if (error?.kind === 'http' && error.status === 422) {
-          setToast({ tone: 'warn', text: error.message })
-          return
-        }
+        setAiMessage(error.message)
         return
       }
       if (id !== requestIdRef.current) return
@@ -471,7 +472,7 @@ export function QadamProvider({ children }) {
     role, setRole, view, setView: goView, tasks, setTasks, teams, setTeams, proposals, setProposals,
     teamId, setTeamId, companyId, companies: SEED_COMPANIES, myCompany, changeCompany,
     toast, setToast, openTaskId, setOpenTaskId, aiModal, setAiModal, menuOpen, setMenuOpen,
-    builderRevision, step, setStep, draft, setDraft, industry, setIndustry, ai, setAi, thinking, answers, setAnswers,
+    builderRevision, step, setStep, draft, setDraft, industry, setIndustry, ai, setAi, thinking, aiMessage, answers, setAnswers,
     card, setCard, confirmed, setConfirmed, history, newTaskId, growth, milestones,
     scored, ranked, live, myTeam, done, currentStep, nav, openTask,
     ready: true, catalogError, submittingProposal, decidingId,
