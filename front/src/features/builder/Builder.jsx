@@ -41,7 +41,7 @@ export function Builder(p) {
         })}
       </ol>
 
-      <div className="sticky top-[61px] z-20 -mx-4 mb-5 border-y border-stone-200 bg-[#F6F4F1]/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-0 xl:hidden">
+      <div className="sticky top-[61px] z-20 -mx-4 mb-5 border-y border-stone-200 bg-canvas/90 px-4 py-2.5 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:top-0 xl:hidden">
         <div className="flex items-center gap-3">
           <Gauge className="size-4 text-orange-600" />
           <span className="text-xs text-stone-500">{t('ratingShort')}</span>
@@ -64,7 +64,7 @@ export function Builder(p) {
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <label htmlFor="industry" className="text-xs text-stone-500">{t('industry')}</label>
-                <select id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700 outline-none focus:border-orange-400">
+                <select id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="rounded-lg border border-stone-200 bg-surface px-2.5 py-1.5 text-xs text-stone-700 outline-none focus:border-orange-400">
                   {INDUSTRIES.map((i) => <option key={i} value={i}>{t(industryKey(i))}</option>)}
                 </select>
               </div>
@@ -82,7 +82,7 @@ export function Builder(p) {
               <div className="flex flex-wrap gap-2">
                 {SEED_DRAFTS.map((d) => (
                   <button key={d.text} type="button" onClick={() => { setDraft(d.text); setIndustry(d.industry) }}
-                    className="rounded-full border border-stone-200 bg-white px-3 py-1.5 text-left text-xs text-stone-500 transition hover:border-orange-300 hover:text-stone-900">
+                    className="rounded-full border border-stone-200 bg-surface px-3 py-1.5 text-left text-xs text-stone-500 transition hover:border-orange-300 hover:text-stone-900">
                     {d.text}
                   </button>
                 ))}
@@ -95,7 +95,7 @@ export function Builder(p) {
       {step === 2 && ai && (
         <div className="q-in space-y-5">
           <div className="flex justify-end">
-            <div className="max-w-[85%] rounded-3xl rounded-br-md bg-stone-900 px-4 py-3 text-[15px] leading-relaxed text-stone-50 shadow-sm">
+            <div className="max-w-[85%] rounded-3xl rounded-br-md bg-bubble px-4 py-3 text-[15px] leading-relaxed text-on-bubble shadow-sm">
               {draft}
             </div>
           </div>
@@ -133,7 +133,7 @@ export function Builder(p) {
                     <textarea id={`answer-${q.field}`} rows={2} value={val} onChange={(e) => setAnswers((a) => ({ ...a, [q.field]: e.target.value }))}
                       placeholder={t('answerPh')}
                       className={cx('w-full resize-none rounded-3xl rounded-br-md border px-4 py-3 text-[15px] leading-relaxed outline-none transition placeholder:text-stone-400 focus:ring-4 focus:ring-orange-500/15',
-                        filled ? 'border-stone-900 bg-stone-900 text-stone-50' : 'border-stone-300 border-dashed bg-white text-stone-900 focus:border-orange-400')} />
+                        filled ? 'border-bubble bg-bubble text-on-bubble' : 'border-stone-300 border-dashed bg-surface text-stone-900 focus:border-orange-400')} />
                     {filled && <div className="mt-1 text-right text-[11px] text-emerald-700"><Check className="mr-1 inline size-3" />{t('countedInScore')}</div>}
                   </div>
                 </div>
@@ -144,7 +144,7 @@ export function Builder(p) {
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="quiet" onClick={() => setStep(1)}><ArrowLeft className="size-4" /> {t('editDraft')}</Button>
             <Button variant="primary" size="lg" onClick={buildCard}>
-              <WandSparkles className="size-4" /> {t('buildCard')} <span className="text-white/60">· {answered}/{ai.data.questions.length}</span>
+              <WandSparkles className="size-4" /> {t('buildCard')} <span className="text-on-accent/60">· {answered}/{ai.data.questions.length}</span>
             </Button>
           </div>
         </div>

@@ -63,7 +63,7 @@ export function LangSwitch({ className }) {
       <div role="radiogroup" aria-label={t('language')} className="grid grid-cols-3 rounded-full border border-stone-200 bg-stone-100/70 p-1">
         {LANGS.map((l) => (
           <button key={l.code} type="button" role="radio" aria-checked={lang === l.code} title={l.name} onClick={() => setLang(l.code)}
-            className={cx('h-7 rounded-full text-[11px] font-semibold tracking-wide transition', lang === l.code ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800')}>
+            className={cx('h-7 rounded-full text-[11px] font-semibold tracking-wide transition', lang === l.code ? 'bg-surface text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800')}>
             {l.short}
           </button>
         ))}
@@ -73,13 +73,13 @@ export function LangSwitch({ className }) {
 }
 
 /** Mobile: кнопка «🌐 РУС» в шапке открывает нижнюю шторку-меню. */
-export function MobileMenu({ onAI, onReset, onClose }) {
+export function MobileMenu({ themeControl, onAI, onReset, onClose }) {
   const t = useT()
   const { lang, setLang } = useLang()
   return (
     <div className="fixed inset-0 z-50 flex items-end lg:hidden">
-      <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="q-in relative w-full rounded-t-3xl border-t border-stone-200 bg-white px-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+      <div className="absolute inset-0 bg-overlay/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="q-in relative w-full rounded-t-3xl border-t border-stone-200 bg-surface px-4 pt-3" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
         <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-stone-200" />
         <div className="mb-2 flex items-center gap-1.5 px-1 text-[11px] uppercase tracking-[0.12em] text-stone-500"><Globe className="size-3.5" />{t('language')}</div>
         <div className="space-y-1">
@@ -91,6 +91,8 @@ export function MobileMenu({ onAI, onReset, onClose }) {
             </button>
           ))}
         </div>
+        <div className="my-3 h-px bg-stone-200" />
+        {themeControl}
         <div className="my-3 h-px bg-stone-200" />
         <button type="button" onClick={() => { onAI(); onClose() }} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100"><Braces className="size-4 text-orange-600" />{t('howAI')}</button>
         <button type="button" onClick={() => { onReset(); onClose() }} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-stone-500 hover:bg-stone-100"><RotateCcw className="size-4" />{t('reset')}</button>

@@ -4,10 +4,21 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#F6F4F1">
+    <script>
+      // Apply before styles/React load to avoid a light flash on a dark visit.
+      (() => {
+        let saved
+        try { saved = localStorage.getItem('qadam.theme') } catch { /* private mode */ }
+        const dark = saved === 'dark'
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        document.querySelector('meta[name="theme-color"]').content = dark ? '#1c1917' : '#F6F4F1'
+      })()
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@500;600;700&family=Onest:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
-    <meta name="theme-color" content="#F6F4F1">
     <title>Qadam AI</title>
   </head>
   <body>

@@ -8,7 +8,7 @@ export function CompanyPicker({ companies, companyId, onChange, className, compa
   const initial = company?.contactName?.[0] || company?.name?.[0] || '?'
 
   return (
-    <div className={cx('rounded-3xl border border-stone-200 bg-white p-3', className)}>
+    <div className={cx('rounded-3xl border border-stone-200 bg-surface p-3', className)}>
       <div className="flex items-center gap-3">
         <div className="grid size-10 shrink-0 place-items-center rounded-full bg-orange-100 text-sm font-semibold text-orange-700" style={FONT_DISPLAY}>
           {initial}
@@ -24,7 +24,7 @@ export function CompanyPicker({ companies, companyId, onChange, className, compa
             className="mt-0.5 w-full truncate bg-transparent text-sm font-medium text-stone-900 outline-none"
           >
             {companies.map((c) => (
-              <option key={c.id} value={c.id} className="bg-white">{c.name}</option>
+              <option key={c.id} value={c.id} className="bg-surface">{c.name}</option>
             ))}
           </select>
           <div className="truncate text-xs text-stone-500">

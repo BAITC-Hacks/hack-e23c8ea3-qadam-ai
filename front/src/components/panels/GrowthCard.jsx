@@ -23,10 +23,10 @@ export function GrowthCard({ history }) {
         <TrendingUp className="size-5 text-orange-600" />
       </div>
       <svg viewBox={`0 0 ${w} ${h}`} className="mt-3 w-full" style={{ maxWidth: '100%' }}>
-        {[40, 70, 90].map((tick) => <line key={tick} x1={pad} x2={w - pad} y1={h - pad - (tick / 100) * (h - pad * 2)} y2={h - pad - (tick / 100) * (h - pad * 2)} stroke="#ece8e4" strokeDasharray="2 4" />)}
+        {[40, 70, 90].map((tick) => <line key={tick} x1={pad} x2={w - pad} y1={h - pad - (tick / 100) * (h - pad * 2)} y2={h - pad - (tick / 100) * (h - pad * 2)} stroke="var(--q-chart-track)" strokeDasharray="2 4" />)}
         <path d={`${d} L${pts[pts.length - 1][0]},${h - pad} L${pts[0][0]},${h - pad} Z`} fill="rgba(249,115,22,.10)" />
         <path d={d} fill="none" stroke="#f97316" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 4 : 2.5} fill={i === pts.length - 1 ? '#ea580c' : '#ffffff'} stroke="#f97316" strokeWidth="1.5" />)}
+        {pts.map((p, i) => <circle key={i} cx={p[0]} cy={p[1]} r={i === pts.length - 1 ? 4 : 2.5} fill={i === pts.length - 1 ? '#ea580c' : 'var(--color-surface)'} stroke="#f97316" strokeWidth="1.5" />)}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-stone-500">
         {history.map((p, i) => <span key={i} className="tabular-nums">{labelOf(p)} · {p.score}</span>)}
