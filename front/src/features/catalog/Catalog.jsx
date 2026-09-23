@@ -6,26 +6,36 @@ import { MiniRing } from '../../components/ui/MiniRing.jsx'
 import { inputCls } from '../../components/ui/inputCls.js'
 import { cx } from '../../lib/cx.js'
 import { LEVELS, levelOf, FONT_MONO, ACCENT_GLOW } from '../../lib/scoring.js'
-import { INDUSTRIES } from '../../data/seed.js'
+import { filterCatalog, positionOf, recommendTasks } from '../../lib/catalog.js'
+import { INDUSTRIES, industryKey } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
-export function Catalog({ tasks, proposals, role, team, onOpen }) {
+export function Catalog({ tasks, proposals, role, team, ready, error, onOpen }) {
   const tr = useT()
   const [q, setQ] = useState('')
   const [topic, setTopic] = useState('__all__')
   const [lvl, setLvl] = useState('all')
 
-  const recs = role === 'student' && team
-    ? tasks.filter((task) => task.score >= 40).map((task) => ({ t: task, match: task.tags.filter((x) => team.skills.includes(x)).length + (team.interests.includes(task.industry) ? 1 : 0) }))
-        .filter((r) => r.match > 0).sort((a, b) => b.match - a.match || b.t.score - a.t.score).slice(0, 3)
-    : []
+  // tasks уже отсортированы rankTasks (useQadam → ranked)
+  const recs = role === 'student' ? recommendTasks(tasks, team).map(({ task, match }) => ({ t: task, match })) : []
+  const list = filterCatalog(tasks, { industry: topic, level: lvl, query: q })
 
-  const list = tasks.filter((task) => (topic === '__all__' || task.industry === topic) && (lvl === 'all' || levelOf(task.score).key === lvl)
-    && (!q || (task.title + task.company + task.context).toLowerCase().includes(q.toLowerCase())))
+  if (!ready) {
+    return (
+      <div className="mx-auto max-w-4xl">
+        <PageHead eyebrow={tr('cEyebrow')} title={tr('cTitle')} sub={tr('cSub')} />
+        <div className="rounded-3xl border border-dashed border-stone-200 p-10 text-center text-sm text-stone-500">{tr('catalogLoading')}</div>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-4xl">
       <PageHead eyebrow={tr('cEyebrow')} title={tr('cTitle')} sub={tr('cSub')} />
+
+      {error && (
+        <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>
+      )}
 
       {recs.length > 0 && (
         <div className="mb-6">
@@ -50,7 +60,7 @@ export function Catalog({ tasks, proposals, role, team, onOpen }) {
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
           <button type="button" onClick={() => setTopic('__all__')} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', topic === '__all__' ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-800')}>{tr('filterAll')}</button>
           {INDUSTRIES.map((ind) => (
-            <button key={ind} type="button" onClick={() => setTopic(ind)} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', topic === ind ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-800')}>{ind}</button>
+            <button key={ind} type="button" onClick={() => setTopic(ind)} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', topic === ind ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-800')}>{tr(industryKey(ind))}</button>
           ))}
         </div>
         <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
@@ -69,7 +79,7 @@ export function Catalog({ tasks, proposals, role, team, onOpen }) {
 
       <ol className="space-y-3">
         {list.map((task) => {
-          const pos = tasks.findIndex((x) => x.id === task.id) + 1
+          const pos = positionOf(tasks, task.id)
           const l = levelOf(task.score)
           const n = proposals.filter((p) => p.taskId === task.id).length
           return (
@@ -86,7 +96,7 @@ export function Catalog({ tasks, proposals, role, team, onOpen }) {
                     {task.owner && <span className="text-[11px] text-stone-500">{tr('yourTask')}</span>}
                   </div>
                   <div className="mt-2 text-[15px] font-medium text-stone-900 group-hover:text-orange-700">{task.title}</div>
-                  <div className="mt-1 flex items-center gap-1.5 text-xs text-stone-500"><Building2 className="size-3.5" />{task.company} · {task.industry}</div>
+                  <div className="mt-1 flex items-center gap-1.5 text-xs text-stone-500"><Building2 className="size-3.5" />{task.company} · {tr(industryKey(task.industry))}</div>
                   {l.key === 'draft' && <div className="mt-2 inline-flex items-center gap-1.5 text-xs text-stone-500"><CircleAlert className="size-3.5" />{tr('needsClarify')}</div>}
                   <div className="mt-3 flex flex-wrap items-center gap-1.5">
                     {task.tags.map((x) => <span key={x} className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[11px] text-stone-500">{x}</span>)}

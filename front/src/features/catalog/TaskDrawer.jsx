@@ -1,38 +1,44 @@
 import { useEffect, useState } from 'react'
-import { Building2, X, Inbox, CircleCheck, Send } from 'lucide-react'
+import { Building2, X, Inbox, CircleCheck, Send, LoaderCircle } from 'lucide-react'
 import { Button } from '../../components/ui/Button.jsx'
 import { LevelChip } from '../../components/ui/LevelChip.jsx'
 import { ScoreRing } from '../../components/ui/ScoreRing.jsx'
 import { StatusChip } from '../../components/ui/StatusChip.jsx'
 import { FormInput } from './FormInput.jsx'
 import { cx } from '../../lib/cx.js'
-import { scoreCard, words, FONT_DISPLAY, CARD_FIELDS } from '../../lib/scoring.js'
+import { scoreCard, FONT_DISPLAY, CARD_FIELDS } from '../../lib/scoring.js'
+import { validateProposal } from '../../lib/catalog.js'
+import { industryKey } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
-export function TaskDrawer({ task, role, team, proposals, onClose, onSubmit, onGoInbox }) {
+export function TaskDrawer({ task, role, team, proposals, submitting, onClose, onSubmit, onGoInbox }) {
   const t = useT()
   const s = scoreCard(task)
   const mine = proposals.find((p) => p.taskId === task.id && p.teamId === team?.id)
-  const [form, setForm] = useState({ idea: '', plan: '', deadline: '4 недели', link: '' })
+  const [form, setForm] = useState({ idea: '', plan: '', deadline: '', link: '' })
   const [err, setErr] = useState({})
 
-  const send = () => {
-    const e = {}
-    if (words(form.idea) < 5) e.idea = t('errIdea')
-    if (words(form.plan) < 3) e.plan = t('errPlan')
-    if (!/^https?:\/\/\S+\.\S+/.test(form.link)) e.link = t('errLink')
-    setErr(e)
-    if (!Object.keys(e).length) onSubmit(task.id, form)
+  const send = async () => {
+    if (submitting) return
+    const v = validateProposal(form)
+    setErr(Object.fromEntries(Object.entries(v.errors).map(([k, key]) => [k, t(key)])))
+    if (!v.ok) return
+    const res = await onSubmit(task.id, v.value)
+    if (res && !res.ok && res.errors) setErr(Object.fromEntries(Object.entries(res.errors).map(([k, key]) => [k, t(key)])))
   }
 
-  useEffect(() => { const k = (e) => e.key === 'Escape' && onClose(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
+  useEffect(() => {
+    const k = (e) => e.key === 'Escape' && onClose()
+    window.addEventListener('keydown', k)
+    return () => window.removeEventListener('keydown', k)
+  }, [onClose])
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" onClick={onClose} />
       <div className="q-in relative flex h-full w-full flex-col border-l border-stone-200 bg-white sm:max-w-xl">
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
-          <div className="flex items-center gap-2 text-xs text-stone-500"><Building2 className="size-3.5" />{task.company} · {task.industry}</div>
+          <div className="flex items-center gap-2 text-xs text-stone-500"><Building2 className="size-3.5" />{task.company} · {t(industryKey(task.industry))}</div>
           <button type="button" onClick={onClose} aria-label={t('close')} className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-900"><X className="size-4" /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-5">
@@ -76,10 +82,13 @@ export function TaskDrawer({ task, role, team, proposals, onClose, onSubmit, onG
               <FormInput id="p-idea" label={t('ideaLabel')} err={err.idea} area value={form.idea} onChange={(v) => setForm({ ...form, idea: v })} ph={t('ideaPh')} />
               <FormInput id="p-plan" label={t('planLabel')} err={err.plan} area value={form.plan} onChange={(v) => setForm({ ...form, plan: v })} ph={t('planPh')} />
               <div className="grid grid-cols-[120px_1fr] gap-2">
-                <FormInput id="p-deadline" label={t('deadlineLabel')} value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} />
+                <FormInput id="p-deadline" label={t('deadlineLabel')} err={err.deadline} value={form.deadline} onChange={(v) => setForm({ ...form, deadline: v })} ph={t('deadlinePh')} />
                 <FormInput id="p-link" label={t('linkLabel')} err={err.link} value={form.link} onChange={(v) => setForm({ ...form, link: v })} ph={t('linkPh')} />
               </div>
-              <Button variant="primary" size="lg" className="w-full" onClick={send}><Send className="size-4" />{t('sendProposal')}</Button>
+              <Button variant="primary" size="lg" className="w-full" disabled={submitting} onClick={send}>
+                {submitting ? <LoaderCircle className="size-4 animate-spin" /> : <Send className="size-4" />}
+                {submitting ? t('sending') : t('sendProposal')}
+              </Button>
             </div>
           )}
         </div>

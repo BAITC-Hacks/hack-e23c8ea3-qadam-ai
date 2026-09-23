@@ -1,43 +1,204 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { PenLine, LayoutGrid, Inbox, Send } from 'lucide-react'
 import { scoreCard, words } from '../lib/scoring.js'
 import { analyzeDraft, validateAIResponse } from '../lib/ai.js'
-import { SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, EMPTY_CARD, MY_COMPANY } from '../data/seed.js'
+import {
+  SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, SEED_COMPANIES, EMPTY_CARD, MY_COMPANY,
+} from '../data/seed.js'
 import { useT } from '../i18n/LangContext.jsx'
+import { STORAGE_KEYS, loadJson, saveJson, removeKey } from '../lib/persist.js'
+import {
+  rankTasks, positionOf, addProposal, decideProposal, confirmMilestone as confirmMilestoneRule,
+  isValidSession, clampView, resolveTeamId,
+} from '../lib/catalog.js'
 
 const QadamCtx = createContext(null)
 export const useQadam = () => useContext(QadamCtx)
 
+const VIEWS = new Set(['builder', 'catalog', 'proposals', 'mine'])
+
+function withOwner(tasks, companyName) {
+  return tasks.map((task) => ({ ...task, owner: task.company === companyName }))
+}
+
+// Меняйте версию, если меняется формат seed/сессии: старое сохранение будет проигнорировано.
+const SESSION_VERSION = 3
+
+function readSession() {
+  const s = loadJson(STORAGE_KEYS.session, null)
+  return s && s.version === SESSION_VERSION && isValidSession(s) ? s : null
+}
+
+function defaultSession() {
+  return {
+    tasks: SEED_TASKS,
+    proposals: SEED_PROPOSALS,
+    teams: SEED_TEAMS,
+    milestones: {},
+    newTaskId: null,
+    growth: [],
+    builder: null,
+  }
+}
+
+function emptyBuilder() {
+  return {
+    step: 1,
+    draft: '',
+    industry: 'Услуги',
+    ai: null,
+    answers: {},
+    card: { ...EMPTY_CARD },
+    confirmed: false,
+    history: [],
+  }
+}
+
 export function QadamProvider({ children }) {
   const t = useT()
-  const [role, setRole] = useState('business')
-  const [view, setView] = useState('builder')
-  const [tasks, setTasks] = useState(SEED_TASKS)
-  const [teams, setTeams] = useState(SEED_TEAMS)
-  const [proposals, setProposals] = useState(SEED_PROPOSALS)
-  const [teamId, setTeamId] = useState('k1')
+  const hydrated = useRef(false)
+  const [catalogError, setCatalogError] = useState(null)
+
+  const saved = useMemo(() => readSession(), [])
+  const initialCompanyId = loadJson(STORAGE_KEYS.companyId, 'c-qala')
+  const initialCompany = SEED_COMPANIES.find((c) => c.id === initialCompanyId) || SEED_COMPANIES[0]
+  const initialRole = loadJson(STORAGE_KEYS.role, 'business') === 'student' ? 'student' : 'business'
+  const initialTeamId = loadJson(STORAGE_KEYS.teamId, 'k1')
+  const rawInitialView = (() => {
+    const fromHash = typeof window !== 'undefined' ? window.location.hash.replace(/^#\/?/, '') : ''
+    if (VIEWS.has(fromHash)) return fromHash
+    const stored = loadJson(STORAGE_KEYS.view, null)
+    if (VIEWS.has(stored)) return stored
+    return initialRole === 'business' ? 'builder' : 'catalog'
+  })()
+  const b0 = saved?.builder && typeof saved.builder === 'object' ? saved.builder : null
+
+  const [role, setRole] = useState(initialRole)
+  const [view, setView] = useState(() => clampView(initialRole, rawInitialView))
+  const [companyId, setCompanyId] = useState(initialCompany.id)
+  const [tasks, setTasks] = useState(() => withOwner(saved?.tasks || SEED_TASKS, initialCompany.name))
+  const [teams, setTeams] = useState(() => (saved?.teams?.length ? saved.teams : SEED_TEAMS))
+  const [proposals, setProposals] = useState(saved?.proposals || SEED_PROPOSALS)
+  const [teamId, setTeamId] = useState(() => {
+    const list = saved?.teams?.length ? saved.teams : SEED_TEAMS
+    return resolveTeamId(list, initialTeamId) || SEED_TEAMS[0].id
+  })
   const [toast, setToast] = useState(null)
   const [openTaskId, setOpenTaskId] = useState(null)
   const [aiModal, setAiModal] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [submittingProposal, setSubmittingProposal] = useState(false)
+  const [decidingId, setDecidingId] = useState(null)
 
-  const [step, setStep] = useState(1)
-  const [draft, setDraft] = useState('')
-  const [industry, setIndustry] = useState('Услуги')
-  const [ai, setAi] = useState(null)
+  const [step, setStep] = useState(b0?.step === 2 || b0?.step === 3 ? b0.step : 1)
+  const [draft, setDraft] = useState(typeof b0?.draft === 'string' ? b0.draft : '')
+  const [industry, setIndustry] = useState(typeof b0?.industry === 'string' ? b0.industry : 'Услуги')
+  const [ai, setAi] = useState(() => (b0?.ai && typeof b0.ai === 'object' && Array.isArray(b0.ai?.data?.questions) ? b0.ai : null))
   const [thinking, setThinking] = useState(false)
-  const [answers, setAnswers] = useState({})
-  const [card, setCard] = useState(EMPTY_CARD)
-  const [confirmed, setConfirmed] = useState(false)
-  const [history, setHistory] = useState([])
-  const [newTaskId, setNewTaskId] = useState(null)
-  const [growth, setGrowth] = useState([])
-  const [milestones, setMilestones] = useState({})
+  const [answers, setAnswers] = useState(b0?.answers && typeof b0.answers === 'object' ? b0.answers : {})
+  const [card, setCard] = useState(() => {
+    if (!b0?.card || typeof b0.card !== 'object') return EMPTY_CARD
+    const next = { ...EMPTY_CARD }
+    for (const [k, v] of Object.entries(b0.card)) {
+      if (typeof v === 'string') next[k] = v
+    }
+    return next
+  })
+  const [confirmed, setConfirmed] = useState(!!b0?.confirmed)
+  const [history, setHistory] = useState(() => (
+    Array.isArray(b0?.history)
+      ? b0.history.filter((h) => h && typeof h.labelKey === 'string' && typeof h.score === 'number')
+      : []
+  ))
+  const [newTaskId, setNewTaskId] = useState(saved?.newTaskId || null)
+  const [growth, setGrowth] = useState(saved?.growth || [])
+  const [milestones, setMilestones] = useState(saved?.milestones || {})
 
-  useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 3200); return () => clearTimeout(id) }, [toast])
+  const myCompany = useMemo(
+    () => SEED_COMPANIES.find((c) => c.id === companyId) || SEED_COMPANIES[0],
+    [companyId],
+  )
 
-  const scored = useMemo(() => tasks.map((task) => ({ ...task, score: scoreCard(task).total })), [tasks])
-  const ranked = useMemo(() => [...scored].sort((a, b) => b.score - a.score || b.createdAt - a.createdAt), [scored])
+  const goView = useCallback((next) => {
+    setView(clampView(role, next))
+  }, [role])
+
+  useEffect(() => {
+    hydrated.current = true
+  }, [])
+
+  useEffect(() => {
+    const next = resolveTeamId(teams, teamId)
+    if (next && next !== teamId) setTeamId(next)
+  }, [teams, teamId])
+
+  useEffect(() => {
+    setView((v) => clampView(role, v))
+  }, [role])
+
+  useEffect(() => {
+    if (!toast) return
+    const id = setTimeout(() => setToast(null), 3200)
+    return () => clearTimeout(id)
+  }, [toast])
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.role, role)
+  }, [role])
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.teamId, teamId)
+  }, [teamId])
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.companyId, companyId)
+  }, [companyId])
+
+  useEffect(() => {
+    saveJson(STORAGE_KEYS.view, view)
+    const hash = `#/${view}`
+    if (typeof window !== 'undefined' && window.location.hash !== hash) {
+      window.history.replaceState(null, '', hash)
+    }
+  }, [view])
+
+  useEffect(() => {
+    if (!hydrated.current) return
+    saveJson(STORAGE_KEYS.session, {
+      version: SESSION_VERSION,
+      tasks,
+      proposals,
+      teams,
+      milestones,
+      newTaskId,
+      growth,
+      builder: {
+        step,
+        draft,
+        industry,
+        ai,
+        answers,
+        card,
+        confirmed,
+        history,
+      },
+    })
+  }, [tasks, proposals, teams, milestones, newTaskId, growth, step, draft, industry, ai, answers, card, confirmed, history])
+
+  useEffect(() => {
+    const onHash = () => {
+      const next = window.location.hash.replace(/^#\/?/, '')
+      if (VIEWS.has(next)) setView(clampView(role, next))
+    }
+    window.addEventListener('hashchange', onHash)
+    return () => window.removeEventListener('hashchange', onHash)
+  }, [role])
+
+  const scored = useMemo(
+    () => tasks.map((task) => ({ ...task, score: scoreCard(task).total })),
+    [tasks],
+  )
+  const ranked = useMemo(() => rankTasks(scored), [scored])
 
   const liveCard = useMemo(() => {
     if (step === 3) return card
@@ -48,8 +209,11 @@ export function QadamProvider({ children }) {
   const live = useMemo(() => scoreCard(liveCard), [liveCard])
 
   const myTeam = teams.find((x) => x.id === teamId)
-  const myTaskIds = tasks.filter((x) => x.owner).map((x) => x.id)
-  const pendingForMe = proposals.filter((p) => myTaskIds.includes(p.taskId) && p.status === 'pending').length
+  const myTaskIds = useMemo(
+    () => new Set(tasks.filter((x) => x.owner).map((x) => x.id)),
+    [tasks],
+  )
+  const pendingForMe = proposals.filter((p) => myTaskIds.has(p.taskId) && p.status === 'pending').length
 
   const flowTask = newTaskId || null
   const flowProps = proposals.filter((p) => p.taskId === flowTask)
@@ -83,7 +247,7 @@ export function QadamProvider({ children }) {
     const c = { ...EMPTY_CARD, industry, context: draft.trim() }
     Object.entries(answers).forEach(([f, v]) => { if (v.trim()) c[f] = v.trim() })
     const first = draft.trim().split(/[.!?\n]/)[0]
-    c.title = first.length > 70 ? first.slice(0, 67) + '…' : first
+    c.title = first.length > 70 ? `${first.slice(0, 67)}…` : first
     c.title = c.title.charAt(0).toUpperCase() + c.title.slice(1)
     setCard(c)
     setHistory((h) => [...h.slice(0, 1), { labelKey: 'hist_answers', score: scoreCard(c).total }])
@@ -94,63 +258,171 @@ export function QadamProvider({ children }) {
   const publish = useCallback(() => {
     if (!card.title.trim()) { setToast({ tone: 'warn', text: t('toastNeedTitle') }); return }
     if (!confirmed) { setToast({ tone: 'warn', text: t('toastNeedConfirm') }); return }
-    const id = 'n' + Date.now()
+    const id = `n${Date.now()}`
     const text = Object.values(card).join(' ')
     const tags = [
       ...(/бот|telegram/i.test(text) ? ['Telegram', 'Бот'] : []),
       ...(/сайт|веб|web|форм|заявк/i.test(text) ? ['Web', 'React'] : []),
       ...(/данн|аналит|excel|1с|отчёт/i.test(text) ? ['Аналитика'] : []),
     ]
-    const task = { ...card, id, company: MY_COMPANY, owner: true, tags: tags.length ? tags : ['Web'], createdAt: 10, isNew: true }
+    const companyName = myCompany?.name || MY_COMPANY
+    const task = {
+      ...card,
+      id,
+      company: companyName,
+      owner: true,
+      tags: tags.length ? tags : ['Web'],
+      createdAt: Date.now(),
+      isNew: true,
+    }
     const s = scoreCard(card).total
     setGrowth([...history.slice(0, 2), { labelKey: 'hist_publish', score: s }])
-    setStep(1); setDraft(''); setAi(null); setAnswers({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
-    setTasks((ts) => [...ts.map((x) => ({ ...x, isNew: false })), task])
+    const cleared = emptyBuilder()
+    setStep(cleared.step)
+    setDraft(cleared.draft)
+    setAi(cleared.ai)
+    setAnswers(cleared.answers)
+    setCard(cleared.card)
+    setConfirmed(cleared.confirmed)
+    setHistory(cleared.history)
+    setTasks((ts) => withOwner([...ts.map((x) => ({ ...x, isNew: false })), task], companyName))
     setNewTaskId(id)
-    const pos = [...scored, { ...task, score: s }].sort((a, b) => b.score - a.score || b.createdAt - a.createdAt).findIndex((x) => x.id === id) + 1
+    const pos = positionOf(rankTasks([...scored, { ...task, score: s }]), id)
     setToast({ tone: 'ok', text: t('toastPublished', { n: pos }) })
-    setView('catalog')
-  }, [card, confirmed, history, scored, t])
+    goView('catalog')
+  }, [card, confirmed, history, scored, t, myCompany, goView])
 
   const resetBuilder = useCallback(() => {
-    setStep(1); setDraft(''); setAi(null); setAnswers({}); setCard(EMPTY_CARD); setConfirmed(false); setHistory([])
+    const cleared = emptyBuilder()
+    setStep(cleared.step)
+    setDraft(cleared.draft)
+    setIndustry(cleared.industry)
+    setAi(cleared.ai)
+    setAnswers(cleared.answers)
+    setCard(cleared.card)
+    setConfirmed(cleared.confirmed)
+    setHistory(cleared.history)
   }, [])
 
   const resetDemo = useCallback(() => {
-    resetBuilder(); setTasks(SEED_TASKS); setProposals(SEED_PROPOSALS); setTeams(SEED_TEAMS); setNewTaskId(null); setMilestones({}); setGrowth([])
-    setRole('business'); setView('builder'); setToast({ tone: 'ok', text: t('toastReset') })
-  }, [resetBuilder, t])
+    const company = SEED_COMPANIES.find((c) => c.id === companyId) || SEED_COMPANIES[0]
+    const fresh = defaultSession()
+    resetBuilder()
+    setTasks(withOwner(fresh.tasks, company.name))
+    setProposals(fresh.proposals)
+    setTeams(fresh.teams)
+    setNewTaskId(null)
+    setMilestones({})
+    setGrowth([])
+    setCatalogError(null)
+    setRole('business')
+    setView('builder')
+    removeKey(STORAGE_KEYS.session)
+    setToast({ tone: 'ok', text: t('toastReset') })
+  }, [resetBuilder, t, companyId])
 
-  const submitProposal = useCallback((taskId, form) => {
-    setProposals((ps) => [...ps, { id: 'p' + Date.now(), taskId, teamId, status: 'pending', ...form }])
-    setToast({ tone: 'ok', text: t('toastProposed') })
-  }, [teamId, t])
+  const changeCompany = useCallback((id) => {
+    const company = SEED_COMPANIES.find((c) => c.id === id)
+    if (!company) return
+    setCompanyId(id)
+    setTasks((ts) => withOwner(ts, company.name))
+    setOpenTaskId(null)
+  }, [])
 
-  const decide = useCallback((pid, status) => {
-    setProposals((ps) => ps.map((p) => (p.id === pid ? { ...p, status } : p)))
-    setToast({ tone: status === 'accepted' ? 'ok' : 'neutral', text: status === 'accepted' ? t('toastAccepted') : t('toastRejected') })
-  }, [t])
+  const submitProposal = useCallback(async (taskId, form) => {
+    if (role !== 'student') {
+      setToast({ tone: 'warn', text: t('errForbidden') })
+      return { ok: false, error: 'errForbidden' }
+    }
+    if (submittingProposal) return false
+    setSubmittingProposal(true)
+    setCatalogError(null)
+    try {
+      await new Promise((r) => setTimeout(r, 180))
+      const res = addProposal({ proposals, tasks, teams, taskId, teamId, form })
+      if (!res.ok) {
+        setToast({ tone: 'warn', text: t(res.error) })
+        return res
+      }
+      setProposals(res.proposals)
+      setToast({ tone: 'ok', text: t('toastProposed') })
+      setOpenTaskId(null)
+      return res
+    } catch (err) {
+      setCatalogError(err?.message || t('catalogError'))
+      setToast({ tone: 'warn', text: err?.message || t('catalogError') })
+      return { ok: false, error: 'catalogError' }
+    } finally {
+      setSubmittingProposal(false)
+    }
+  }, [role, submittingProposal, proposals, tasks, teams, teamId, t])
+
+  const decide = useCallback(async (pid, status) => {
+    if (decidingId) return
+    setDecidingId(pid)
+    try {
+      await new Promise((r) => setTimeout(r, 120))
+      const res = decideProposal({
+        proposals,
+        milestones,
+        proposalId: pid,
+        decision: status,
+        role,
+        ownerTaskIds: myTaskIds,
+      })
+      if (!res.ok) { setToast({ tone: 'warn', text: t(res.error) }); return }
+      setProposals(res.proposals)
+      setToast({
+        tone: status === 'accepted' ? 'ok' : 'neutral',
+        text: status === 'accepted' ? t('toastAccepted') : status === 'rejected' ? t('toastRejected') : t('toastRestored'),
+      })
+    } finally {
+      setDecidingId(null)
+    }
+  }, [decidingId, proposals, milestones, role, myTaskIds, t])
 
   const confirmMilestone = useCallback((p) => {
-    setMilestones((m) => ({ ...m, [p.id]: true }))
-    setTeams((ts) => ts.map((x) => (x.id === p.teamId ? { ...x, points: x.points + 50 } : x)))
+    const res = confirmMilestoneRule({
+      proposals,
+      teams,
+      milestones,
+      proposalId: p.id,
+      role,
+      ownerTaskIds: myTaskIds,
+    })
+    if (!res.ok) { setToast({ tone: 'warn', text: t(res.error) }); return }
+    setMilestones(res.milestones)
+    setTeams(res.teams)
     setToast({ tone: 'ok', text: t('toastMilestone') })
-  }, [t])
+  }, [proposals, teams, milestones, role, myTaskIds, t])
 
-  const switchRole = useCallback((r) => { setRole(r); setView(r === 'business' ? 'builder' : 'catalog'); setOpenTaskId(null) }, [])
+  const switchRole = useCallback((r) => {
+    setRole(r)
+    setView(clampView(r, r === 'business' ? 'builder' : 'catalog'))
+    setOpenTaskId(null)
+  }, [])
 
   const nav = role === 'business'
-    ? [{ id: 'builder', label: t('navNew'), icon: PenLine }, { id: 'catalog', label: t('navCatalog'), icon: LayoutGrid }, { id: 'proposals', label: t('navInbox'), icon: Inbox, badge: pendingForMe }]
-    : [{ id: 'catalog', label: t('navCatalog'), icon: LayoutGrid }, { id: 'mine', label: t('navMine'), icon: Send, badge: proposals.filter((p) => p.teamId === teamId).length }]
+    ? [
+      { id: 'builder', label: t('navNew'), icon: PenLine },
+      { id: 'catalog', label: t('navCatalog'), icon: LayoutGrid },
+      { id: 'proposals', label: t('navInbox'), icon: Inbox, badge: pendingForMe },
+    ]
+    : [
+      { id: 'catalog', label: t('navCatalog'), icon: LayoutGrid },
+      { id: 'mine', label: t('navMine'), icon: Send, badge: proposals.filter((p) => p.teamId === teamId).length },
+    ]
 
   const openTask = scored.find((x) => x.id === openTaskId)
 
   const value = {
-    role, setRole, view, setView, tasks, setTasks, teams, setTeams, proposals, setProposals,
-    teamId, setTeamId, toast, setToast, openTaskId, setOpenTaskId, aiModal, setAiModal, menuOpen, setMenuOpen,
+    role, setRole, view, setView: goView, tasks, setTasks, teams, setTeams, proposals, setProposals,
+    teamId, setTeamId, companyId, companies: SEED_COMPANIES, myCompany, changeCompany,
+    toast, setToast, openTaskId, setOpenTaskId, aiModal, setAiModal, menuOpen, setMenuOpen,
     step, setStep, draft, setDraft, industry, setIndustry, ai, setAi, thinking, answers, setAnswers,
     card, setCard, confirmed, setConfirmed, history, newTaskId, growth, milestones,
     scored, ranked, live, myTeam, done, currentStep, nav, openTask,
+    ready: true, catalogError, submittingProposal, decidingId,
     runAnalysis, buildCard, publish, resetBuilder, resetDemo, submitProposal, decide, confirmMilestone, switchRole,
   }
 
