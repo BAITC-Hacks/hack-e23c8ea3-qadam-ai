@@ -91,6 +91,7 @@ export function QadamProvider({ children }) {
   const [decidingId, setDecidingId] = useState(null)
 
   const [step, setStepState] = useState(b0?.step === 2 || b0?.step === 3 ? b0.step : 1)
+  const [builderRevision, setBuilderRevision] = useState(0)
   const [draft, setDraftState] = useState(typeof b0?.draft === 'string' ? b0.draft : '')
   const [industry, setIndustryState] = useState(typeof b0?.industry === 'string' ? b0.industry : 'Услуги')
   const [ai, setAi] = useState(() => (b0?.ai && typeof b0.ai === 'object' && Array.isArray(b0.ai?.data?.questions) ? b0.ai : null))
@@ -347,6 +348,7 @@ export function QadamProvider({ children }) {
 
   const resetBuilder = useCallback(() => {
     cancelPending()
+    setBuilderRevision((revision) => revision + 1)
     const cleared = emptyBuilder()
     setStepState(cleared.step)
     setDraftState(cleared.draft)
@@ -473,7 +475,7 @@ export function QadamProvider({ children }) {
     role, setRole, view, setView: goView, tasks, setTasks, teams, setTeams, proposals, setProposals,
     teamId, setTeamId, companyId, companies: SEED_COMPANIES, myCompany, changeCompany,
     toast, setToast, openTaskId, setOpenTaskId, aiModal, setAiModal, menuOpen, setMenuOpen,
-    step, setStep, draft, setDraft, industry, setIndustry, ai, setAi, thinking, answers, setAnswers,
+    builderRevision, step, setStep, draft, setDraft, industry, setIndustry, ai, setAi, thinking, answers, setAnswers,
     card, setCard, confirmed, setConfirmed, history, newTaskId, growth, milestones,
     scored, ranked, live, myTeam, done, currentStep, nav, openTask,
     ready: true, catalogError, submittingProposal, decidingId,

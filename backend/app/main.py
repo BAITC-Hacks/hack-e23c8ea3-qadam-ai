@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import llm
-from app.routers import constructor
+from app.routers import constructor, voice
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 log = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="Qadam AI", lifespan=lifespan)
 app.include_router(constructor.router)
+app.include_router(voice.router)
 
 
 @app.get("/api/health")

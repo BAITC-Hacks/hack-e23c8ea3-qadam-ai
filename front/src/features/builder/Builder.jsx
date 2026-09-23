@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Check, Sparkles, LoaderCircle, ArrowLeft, WandSparkles, ShieldCheck, Rocket, RotateCcw, CircleAlert, Gauge } from 'lucide-react'
+import { VoiceInput } from './VoiceInput.jsx'
 import { PageHead } from '../../components/shell/PageHead.jsx'
 import { AssistantBubble } from '../../components/shell/AssistantBubble.jsx'
 import { Button } from '../../components/ui/Button.jsx'
@@ -15,6 +17,7 @@ import { useT } from '../../i18n/LangContext.jsx'
 export function Builder(p) {
   const { step, setStep, draft, setDraft, industry, setIndustry, ai, thinking, runAnalysis, answers, setAnswers, buildCard, card, setCard, confirmed, setConfirmed, publish, live, resetBuilder } = p
   const t = useT()
+  const [voiceBusy, setVoiceBusy] = useState(false)
   const steps = [t('step1'), t('step2'), t('step3')]
   const answered = ai ? ai.data.questions.filter((q) => (answers[q.field] || '').trim()).length : 0
   const updateCard = (field, value) => { setCard({ ...card, [field]: value }); setConfirmed(false) }
@@ -28,8 +31,8 @@ export function Builder(p) {
           const n = i + 1
           const state = step > n ? 'done' : step === n ? 'active' : 'todo'
           return (
-            <li key={s} className="flex flex-1 items-center gap-2">
-              <button type="button" disabled={n > step && !(n === 2 && ai)} onClick={() => setStep(n)}
+            <li key={s} className="flex min-w-0 flex-1 items-center gap-2">
+              <button type="button" disabled={voiceBusy || (n > step && !(n === 2 && ai))} onClick={() => setStep(n)}
                 className={cx('flex min-w-0 items-center gap-2 text-xs font-medium transition', state === 'todo' ? 'text-stone-400' : state === 'active' ? 'text-stone-900' : 'text-stone-500 hover:text-stone-900')}>
                 <span className={cx('grid size-6 shrink-0 place-items-center rounded-full border text-[11px] tabular-nums',
                   state === 'done' ? 'border-orange-300 bg-orange-100 text-orange-600' : state === 'active' ? 'border-orange-500 text-orange-600' : 'border-stone-300')}>
@@ -63,6 +66,7 @@ export function Builder(p) {
                 placeholder={t('draftPh')}
                 className={cx(inputCls, 'resize-none text-[15px] leading-relaxed')} />
             </Field>
+            <VoiceInput draft={draft} onChange={setDraft} disabled={thinking} onBusyChange={setVoiceBusy} />
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <label htmlFor="industry" className="text-xs text-stone-500">{t('industry')}</label>
@@ -71,8 +75,8 @@ export function Builder(p) {
                 </select>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
-                {ai && <Button variant="quiet" onClick={() => setStep(2)} disabled={thinking}>{t('backToQuestions')}</Button>}
-                <Button variant="primary" size="lg" onClick={runAnalysis} disabled={thinking || !draft.trim()} className="w-full sm:w-auto">
+                {ai && <Button variant="quiet" onClick={() => setStep(2)} disabled={thinking || voiceBusy}>{t('backToQuestions')}</Button>}
+                <Button variant="primary" size="lg" onClick={runAnalysis} disabled={thinking || voiceBusy || !draft.trim()} className="w-full sm:w-auto">
                   {thinking ? <><LoaderCircle className="size-4 animate-spin" /> {t('reading')}</> : <><Sparkles className="size-4" /> {t('goAssistant')}</>}
                 </Button>
               </div>
@@ -86,8 +90,8 @@ export function Builder(p) {
               <div className="mb-2 text-xs text-stone-500">{t('examplesHint')}</div>
               <div className="flex flex-wrap gap-2">
                 {SEED_DRAFTS.map((d) => (
-                  <button key={d.text} type="button" onClick={() => { setDraft(d.text); setIndustry(d.industry) }}
-                    className="rounded-full border border-stone-200 bg-surface px-3 py-1.5 text-left text-xs text-stone-500 transition hover:border-orange-300 hover:text-stone-900">
+                  <button key={d.text} type="button" disabled={voiceBusy} onClick={() => { setDraft(d.text); setIndustry(d.industry) }}
+                    className="rounded-full border border-stone-200 bg-surface px-3 py-1.5 text-left text-xs text-stone-500 transition hover:border-orange-300 hover:text-stone-900 disabled:cursor-not-allowed disabled:opacity-50">
                     {d.text}
                   </button>
                 ))}

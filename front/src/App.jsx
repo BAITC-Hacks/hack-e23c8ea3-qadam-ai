@@ -81,6 +81,7 @@ function Shell() {
 
               {q.view === 'builder' && (
                 <Builder
+                  key={`${q.companyId}:${q.builderRevision}`}
                   step={q.step} setStep={q.setStep} draft={q.draft} setDraft={q.setDraft}
                   industry={q.industry} setIndustry={q.setIndustry} ai={q.ai} thinking={q.thinking}
                   runAnalysis={q.runAnalysis} answers={q.answers} setAnswers={q.setAnswers}
