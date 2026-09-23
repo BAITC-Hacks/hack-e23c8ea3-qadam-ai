@@ -1,0 +1,18 @@
+# Секреты
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Данные, которые создаются при запуске
+backend/data/db.json
+
+# Node
+node_modules/
+dist/
+
+# Системное
+.DS_Store
