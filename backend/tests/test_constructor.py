@@ -396,7 +396,6 @@ def test_unavailable_ai_skips_masking(client, provider, monkeypatch, route):
         "demo@пример.рф", "демо+тест@пример.рф", "demo%test@example.com",
         "demo@xn--e1afmkfd.xn--p1ai", "demo@example.com", "+7 (700) 000-00-00",
         "77000000000", "@demo_contact", "https://t.me/demo_contact",
-        "+7.700.000.00.00", "7.700.000.00.00", "+7 (700) 000.00.00",
     ],
 )
 def test_supported_contacts_round_trip(contact):
@@ -414,8 +413,6 @@ def test_supported_contacts_round_trip(contact):
         "Срок 14 дней, точность 95%, не более 100 заявок за 2 минуты.",
         "Дедлайн 2026-09-23 14:30; другой срок 23-09-2026 15:00.",
         "Период 2026-09-23, версия 1.2.3, ID 77000000000abc.",
-        "Дедлайн 23.09.2026 14:30; другой срок 2026.09.23 15:00.",
-        "Даты 23.09.2026. и 2026.09.23. Версия 1.2.3.",
         "1" * 100, "1 " * 100,
     ],
 )
@@ -486,36 +483,6 @@ def test_contacts_removed_from_actual_sdk_messages(client, monkeypatch, route):
         assert response.json()["card"]["contact"] == private
 
 
-@pytest.mark.parametrize("phone", [
-    "+7.700.000.00.00", "7.700.000.00.00", "+7 (700) 000.00.00", "+7 700 000 00 00",
-])
-def test_phone_round_trip_through_card_route_and_sdk(client, monkeypatch, phone):
-    draft = f"Нужен отчет по продажам. Связь: {phone}."
-    monkeypatch.setattr(llm, "ai_available", lambda: True)
-
-    def complete(**kwargs):
-        payload = json.loads(kwargs["messages"][1]["content"])
-        result = built_card()
-        result["card"]["context"] = payload["draft"]
-        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(
-            parsed=kwargs["response_format"].model_validate(result), refusal=None,
-        ))])
-
-    parse = Mock(side_effect=complete)
-    sdk = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(parse=parse)))
-    monkeypatch.setattr(llm, "_get_client", lambda: sdk)
-    response = client.post("/api/constructor/card", json={"draft": draft, "answers": {}})
-
-    assert response.status_code == 200
-    parse.assert_called_once()
-    assert response.json()["card"]["contact"] == phone
-    assert response.json()["card"]["context"] == draft
-    sent = parse.call_args.kwargs["messages"][1]["content"]
-    assert phone not in sent
-    assert "[[QADAM_CONTACT_" in sent
-    assert "[phone]" not in sent
-
-
 def test_invented_unicode_contact_rejected(client, provider):
     invalid = built_card()
     invalid["warnings"] = ["contact: invented@пример.рф"]
@@ -523,16 +490,6 @@ def test_invented_unicode_contact_rejected(client, provider):
     response = client.post("/api/constructor/card", json={"draft": DRAFT, "answers": {}})
     assert response.status_code == 503
     assert "invented" not in response.text
-    assert provider[1].call_count == 2
-
-
-def test_invented_dotted_phone_rejected(client, provider):
-    invalid = built_card()
-    invalid["card"]["context"] = "Связь: +7.700.000.00.00."
-    provider[0].extend([invalid, invalid])
-    response = client.post("/api/constructor/card", json={"draft": DRAFT, "answers": {}})
-    assert response.status_code == 503
-    assert "+7.700.000.00.00" not in response.text
     assert provider[1].call_count == 2
 
 

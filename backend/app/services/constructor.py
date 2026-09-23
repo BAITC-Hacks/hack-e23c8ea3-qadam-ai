@@ -161,20 +161,18 @@ CONTACT_PATTERN = re.compile(
     r"|(?:https?://)?t\.me/[A-Za-z0-9_]+"
     r"|(?<!\w)@[A-Za-z][A-Za-z0-9_]{2,}"
     # Поглощаем весь числовой кандидат даже при неверной длине, без перебора
-    # его суффиксов. Конечные разделители/пунктуацию вернём неизменёнными.
-    r"|(?P<phone>(?<![\w+])\+?\d[\d ().-]*+)",
+    # его суффиксов. Отделяющие пробелы/скобки вернём неизменёнными.
+    r"|(?P<phone>(?<![\w+])\+?\d[\d ()-]*+)",
     re.IGNORECASE,
 )
 CONTACT_TOKEN = re.compile(r"\[\[QADAM_CONTACT_[^\[\]\s]*\]\]")
-DATE_PREFIX = re.compile(
-    r"(?:\d{4}[-.]\d{2}[-.]\d{2}|\d{2}[-.]\d{2}[-.]\d{4})(?:$|[ ().])"
-)
+DATE_PREFIX = re.compile(r"(?:\d{4}-\d{2}-\d{2}|\d{2}-\d{2}-\d{4})(?:$|[ ()])")
 
 
 def _contact_value(match: re.Match[str]) -> str:
     if match.group("phone") is None:
         return match.group()
-    value = match.group().rstrip(" ().-")
+    value = match.group().rstrip(" ()-")
     if DATE_PREFIX.match(value):
         return ""
     # Не выделяем телефон внутри идентификатора вида 77000000000abc.
