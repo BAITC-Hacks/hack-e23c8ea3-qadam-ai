@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { appendTranscript, createVoiceSession } from './voice.js'
+import { appendTranscript, createVoiceCoordinator, createVoiceSession } from './voice.js'
 
 const flush = () => new Promise((resolve) => setImmediate(resolve))
 const deferred = () => {
@@ -352,4 +352,117 @@ test('network and non-JSON failures show safe errors', async () => {
     assert.deepEqual(h.transcripts, [])
     assert.equal(h.timers.size, 0)
   }
+})
+
+test('coordinator releases ownership only for the same owner identity', () => {
+  const coordinator = createVoiceCoordinator(), first = {}, second = {}
+  assert.equal(coordinator.acquire(first), true)
+  assert.equal(coordinator.acquire(first), true)
+  assert.equal(coordinator.acquire(second), false)
+  coordinator.release(second)
+  assert.equal(coordinator.acquire(second), false)
+  coordinator.release(first)
+  assert.equal(coordinator.acquire(second), true)
+  coordinator.release(first)
+  assert.equal(coordinator.acquire(first), false)
+  coordinator.release(second)
+  assert.equal(coordinator.acquire(first), true)
+})
+
+test('shared coordinator allows one microphone request and holds recording/transcription ownership', async () => {
+  const coordinator = createVoiceCoordinator(), permission = deferred(), response = deferred()
+  let firstRequests = 0, secondRequests = 0
+  const first = harness({ coordinator, getUserMedia: () => { firstRequests++; return permission.promise }, fetch: () => response.promise })
+  const second = harness({ coordinator, getUserMedia: async () => { secondRequests++; return second.stream } })
+  const started = first.session.start()
+  await second.session.start()
+  assert.equal(firstRequests, 1)
+  assert.equal(secondRequests, 0)
+  assert.deepEqual(second.states, [])
+  permission.resolve(first.stream)
+  await started
+  await second.session.start()
+  assert.equal(secondRequests, 0)
+  first.session.stop()
+  await flush()
+  assert.equal(first.states.at(-1).phase, 'transcribing')
+  await second.session.start()
+  assert.equal(secondRequests, 0)
+  response.resolve({ ok: true, json: async () => ({ text: 'first answer' }) })
+  await flush()
+  await second.session.start()
+  assert.equal(secondRequests, 1)
+  assert.deepEqual(first.transcripts, ['first answer'])
+  second.session.cancel()
+})
+
+test('cancel, dispose and recorder errors release ownership for the next field', async () => {
+  for (const action of ['cancel', 'dispose', 'error']) {
+    const coordinator = createVoiceCoordinator()
+    const first = harness({ coordinator }), second = harness({ coordinator })
+    await first.session.start()
+    if (action === 'error') first.recorders[0].onerror()
+    else first.session[action]()
+    await second.session.start()
+    await flush()
+    assert.equal(first.track.stopped, 1)
+    assert.equal(second.recorders.length, 1)
+    assert.equal(second.states.at(-1).phase, 'recording')
+    assert.deepEqual(first.transcripts, [])
+    second.session.cancel()
+  }
+})
+
+test('permission failure releases coordinator before another field starts', async () => {
+  const coordinator = createVoiceCoordinator()
+  const first = harness({ coordinator, getUserMedia: async () => { throw Object.assign(new Error(), { name: 'NotAllowedError' }) } })
+  const second = harness({ coordinator })
+  await first.session.start()
+  assert.equal(first.states.at(-1).error, 'voicePermission')
+  await second.session.start()
+  assert.equal(second.recorders.length, 1)
+  second.session.cancel()
+})
+
+test('late permission from a cancelled field cannot release another active field', async () => {
+  const coordinator = createVoiceCoordinator(), permission = deferred()
+  const first = harness({ coordinator, getUserMedia: () => permission.promise })
+  const second = harness({ coordinator }), third = harness({ coordinator })
+  const pending = first.session.start()
+  first.session.cancel()
+  await second.session.start()
+  permission.resolve(first.stream)
+  await pending
+  first.session.cancel()
+  await third.session.start()
+  assert.equal(first.track.stopped, 1)
+  assert.equal(second.track.stopped, 0)
+  assert.equal(third.recorders.length, 0)
+  assert.deepEqual(first.transcripts, [])
+  second.session.cancel()
+  await third.session.start()
+  assert.equal(third.recorders.length, 1)
+  third.session.cancel()
+})
+
+test('late response from a cancelled field neither appends nor releases another field', async () => {
+  const coordinator = createVoiceCoordinator(), response = deferred()
+  const first = harness({ coordinator, fetch: () => response.promise })
+  const second = harness({ coordinator }), third = harness({ coordinator })
+  await first.session.start()
+  first.session.stop()
+  await flush()
+  first.session.cancel()
+  await second.session.start()
+  response.resolve({ ok: true, json: async () => ({ text: 'stale first answer' }) })
+  await flush()
+  first.session.dispose()
+  await third.session.start()
+  assert.deepEqual(first.transcripts, [])
+  assert.equal(second.track.stopped, 0)
+  assert.equal(third.recorders.length, 0)
+  second.session.cancel()
+  await third.session.start()
+  assert.equal(third.recorders.length, 1)
+  third.session.cancel()
 })

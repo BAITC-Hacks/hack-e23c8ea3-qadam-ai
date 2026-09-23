@@ -10,6 +10,7 @@ import { LevelChip } from '../../components/ui/LevelChip.jsx'
 import { inputCls } from '../../components/ui/inputCls.js'
 import { cx } from '../../lib/cx.js'
 import { QUESTION_BANK } from '../../lib/ai.js'
+import { createVoiceCoordinator } from '../../lib/voice.js'
 import { words, FONT_MONO, CRITERIA, CARD_FIELDS } from '../../lib/scoring.js'
 import { INDUSTRIES, SEED_DRAFTS, industryKey } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
@@ -17,7 +18,12 @@ import { useT } from '../../i18n/LangContext.jsx'
 export function Builder(p) {
   const { step, setStep, draft, setDraft, industry, setIndustry, ai, thinking, runAnalysis, answers, setAnswers, buildCard, card, setCard, confirmed, setConfirmed, publish, live, resetBuilder } = p
   const t = useT()
-  const [voiceBusy, setVoiceBusy] = useState(false)
+  const [voiceCoordinator] = useState(createVoiceCoordinator)
+  const [activeVoiceTarget, setActiveVoiceTarget] = useState(null)
+  const voiceBusy = activeVoiceTarget !== null
+  const setVoiceBusy = (target, busy) => {
+    setActiveVoiceTarget((current) => busy ? target : current === target ? null : current)
+  }
   const steps = [t('step1'), t('step2'), t('step3')]
   const answered = ai ? ai.data.questions.filter((q) => (answers[q.field] || '').trim()).length : 0
   const updateCard = (field, value) => { setCard({ ...card, [field]: value }); setConfirmed(false) }
@@ -66,7 +72,9 @@ export function Builder(p) {
                 placeholder={t('draftPh')}
                 className={cx(inputCls, 'resize-none text-[15px] leading-relaxed')} />
             </Field>
-            <VoiceInput draft={draft} onChange={setDraft} disabled={thinking} onBusyChange={setVoiceBusy} />
+            <VoiceInput key="draft" value={draft} onChange={setDraft} targetId="draft" coordinator={voiceCoordinator}
+              disabled={thinking || (voiceBusy && activeVoiceTarget !== 'draft')}
+              onBusyChange={(busy) => setVoiceBusy('draft', busy)} />
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <label htmlFor="industry" className="text-xs text-stone-500">{t('industry')}</label>
@@ -125,6 +133,8 @@ export function Builder(p) {
             {ai.source === 'stub' && <p className="mt-3 text-xs text-amber-800" role="status">{t('aiFallback')}</p>}
           </AssistantBubble>
 
+          <p id="answers-voice-hint" className="text-xs leading-relaxed text-stone-500">{t('voiceHint')}</p>
+
           {ai.data.questions.map((q, i) => {
             const crit = CRITERIA.find((c) => c.key === (q.field === 'need' ? 'context' : q.field))
             const val = answers[q.field] || ''
@@ -132,7 +142,7 @@ export function Builder(p) {
             return (
               <div key={q.field} className="q-in space-y-2.5" style={{ animationDelay: `${i * 80}ms` }}>
                 <AssistantBubble compact>
-                  <p className="text-[15px] text-stone-900">{ai.source === 'ai' ? q.text : t(`ask_${q.field}${ai.data.detected[q.field] && QUESTION_BANK[q.field]?.refine ? '_refine' : ''}`)}</p>
+                  <p id={`question-${q.field}`} className="text-[15px] text-stone-900">{ai.source === 'ai' ? q.text : t(`ask_${q.field}${ai.data.detected[q.field] && QUESTION_BANK[q.field]?.refine ? '_refine' : ''}`)}</p>
                   <div className="mt-1.5 flex items-center gap-1.5 text-xs text-stone-500">
                     <crit.icon className="size-3.5" />{t(`crit_${crit.key}`)}
                     <span className={cx('ml-1 rounded-full px-2 py-0.5 font-semibold tabular-nums', filled ? 'bg-orange-100 text-orange-700' : 'bg-stone-100 text-stone-500')}>{t('upTo')}{crit.weight}</span>
@@ -141,10 +151,16 @@ export function Builder(p) {
                 <div className="flex justify-end">
                   <div className="w-full max-w-[85%]">
                     <textarea id={`answer-${q.field}`} rows={2} value={val} onChange={(e) => setAnswers((a) => ({ ...a, [q.field]: e.target.value }))}
+                      aria-labelledby={`question-${q.field}`}
                       placeholder={t('answerPh')}
                       className={cx('w-full resize-none rounded-3xl rounded-br-md border px-4 py-3 text-[15px] leading-relaxed outline-none transition placeholder:text-stone-400 focus:ring-4 focus:ring-orange-500/15',
                         filled ? 'border-bubble bg-bubble text-on-bubble' : 'border-stone-300 border-dashed bg-surface text-stone-900 focus:border-orange-400')} />
                     {filled && <div className="mt-1 text-right text-[11px] text-emerald-700"><Check className="mr-1 inline size-3" />{t('countedInScore')}</div>}
+                    <VoiceInput key={`answer-${q.field}`} value={val} targetId={`answer-${q.field}`} label={t(`field_${q.field}`)}
+                      startLabel={t('voiceAnswer')} descriptionId="answers-voice-hint" coordinator={voiceCoordinator}
+                      onChange={(value) => setAnswers((current) => ({ ...current, [q.field]: value }))}
+                      disabled={thinking || (voiceBusy && activeVoiceTarget !== `answer-${q.field}`)}
+                      onBusyChange={(busy) => setVoiceBusy(`answer-${q.field}`, busy)} />
                   </div>
                 </div>
               </div>
@@ -153,7 +169,7 @@ export function Builder(p) {
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="quiet" onClick={() => setStep(1)}><ArrowLeft className="size-4" /> {t('editDraft')}</Button>
-            <Button variant="primary" size="lg" onClick={buildCard} disabled={thinking}>
+            <Button variant="primary" size="lg" onClick={buildCard} disabled={thinking || voiceBusy}>
               {thinking ? <LoaderCircle className="size-4 animate-spin" /> : <WandSparkles className="size-4" />} {thinking ? t('buildingCard') : t('buildCard')} <span className="text-on-accent/60">· {answered}/{ai.data.questions.length}</span>
             </Button>
           </div>

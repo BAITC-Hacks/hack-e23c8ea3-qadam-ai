@@ -153,6 +153,7 @@ export default {
   toastRestored: 'Отклик снова на рассмотрении',
   ind_retail: 'Ритейл', ind_logistics: 'Логистика', ind_services: 'Услуги', ind_finance: 'Финансы', ind_horeca: 'HoReCa', ind_education: 'Образование',
   voiceStart: 'Ввести голосом',
+  voiceAnswer: 'Ответить голосом',
   voiceRequesting: 'Доступ к микрофону…',
   voiceRecording: 'Идёт запись',
   voiceStop: 'Остановить и распознать',

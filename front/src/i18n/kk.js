@@ -153,6 +153,7 @@ export default {
   toastRestored: 'Өтінім қайта қаралуда',
   ind_retail: 'Бөлшек сауда', ind_logistics: 'Логистика', ind_services: 'Қызметтер', ind_finance: 'Қаржы', ind_horeca: 'HoReCa', ind_education: 'Білім беру',
   voiceStart: 'Дауыспен енгізу',
+  voiceAnswer: 'Дауыспен жауап беру',
   voiceRequesting: 'Микрофонға рұқсат сұралуда…',
   voiceRecording: 'Дауыс жазылып жатыр',
   voiceStop: 'Тоқтатып, мәтінге айналдыру',

@@ -153,6 +153,7 @@ export default {
   toastRestored: 'Proposal is back under review',
   ind_retail: 'Retail', ind_logistics: 'Logistics', ind_services: 'Services', ind_finance: 'Finance', ind_horeca: 'HoReCa', ind_education: 'Education',
   voiceStart: 'Use voice input',
+  voiceAnswer: 'Answer by voice',
   voiceRequesting: 'Requesting microphone access…',
   voiceRecording: 'Recording',
   voiceStop: 'Stop and transcribe',

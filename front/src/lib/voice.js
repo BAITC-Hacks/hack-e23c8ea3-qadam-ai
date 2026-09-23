@@ -15,6 +15,21 @@ export function appendTranscript(draft, text) {
   return previous ? `${previous}${previous.endsWith('\n') ? '' : '\n'}${next}` : next
 }
 
+/** Share one recording/transcription slot across multiple voice inputs. */
+export function createVoiceCoordinator() {
+  let currentOwner = null
+  return {
+    acquire(owner) {
+      if (currentOwner !== null && currentOwner !== owner) return false
+      currentOwner = owner
+      return true
+    },
+    release(owner) {
+      if (currentOwner === owner) currentOwner = null
+    },
+  }
+}
+
 function stopTracks(stream) {
   for (const track of stream?.getTracks() || []) {
     try { track.stop() } catch { /* Continue releasing the other tracks. */ }
@@ -59,6 +74,7 @@ export function createVoiceSession(options = {}) {
     job.controller?.abort()
     job.controller = null
     job.chunks = []
+    options.coordinator?.release(job)
   }
 
   function fail(job, error) {
@@ -128,6 +144,7 @@ export function createVoiceSession(options = {}) {
   async function start() {
     if (disposed || (active && ['requesting', 'recording', 'transcribing'].includes(state.phase))) return
     const job = { chunks: [], size: 0, stream: null, recorder: null, stopping: false }
+    if (options.coordinator && !options.coordinator.acquire(job)) return
     active = job
     emit('requesting', 0)
     if (!isCurrent(job)) return

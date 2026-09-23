@@ -7,25 +7,28 @@ import { appendTranscript, createVoiceSession } from '../../lib/voice.js'
 const BUSY_PHASES = new Set(['requesting', 'recording', 'transcribing'])
 const INITIAL_STATE = { phase: 'idle', elapsed: 0, error: null }
 
-export function VoiceInput({ draft, onChange, disabled, onBusyChange }) {
+export function VoiceInput({ value, onChange, disabled, onBusyChange, coordinator, targetId, label, startLabel, descriptionId }) {
   const t = useT()
-  const hintId = useId()
+  const ownHintId = useId()
+  const hintId = descriptionId || ownHintId
   const [state, setState] = useState(INITIAL_STATE)
   const session = useRef(null)
-  const latest = useRef({ draft, onChange, onBusyChange })
+  const latest = useRef({ value, onChange, onBusyChange })
   useLayoutEffect(() => {
-    latest.current = { draft, onChange, onBusyChange }
-  }, [draft, onChange, onBusyChange])
+    latest.current = { value, onChange, onBusyChange }
+  }, [value, onChange, onBusyChange])
 
   useEffect(() => {
+    const notifyBusy = latest.current.onBusyChange
     const current = createVoiceSession({
+      coordinator,
       onState: (next) => {
         setState(next)
-        latest.current.onBusyChange(BUSY_PHASES.has(next.phase))
+        notifyBusy(BUSY_PHASES.has(next.phase))
       },
       onTranscript: (text) => {
-        const { draft: currentDraft, onChange: change } = latest.current
-        change(appendTranscript(currentDraft, text))
+        const { value: currentValue, onChange: change } = latest.current
+        change(appendTranscript(currentValue, text))
       },
     })
     session.current = current
@@ -40,9 +43,9 @@ export function VoiceInput({ draft, onChange, disabled, onBusyChange }) {
       session.current = null
       document.removeEventListener('visibilitychange', cancelOnHide)
       window.removeEventListener('pagehide', cancelOnLeave)
-      latest.current.onBusyChange(false)
+      notifyBusy(false)
     }
-  }, [])
+  }, [coordinator, targetId])
 
   const busy = BUSY_PHASES.has(state.phase)
   const recording = state.phase === 'recording'
@@ -52,19 +55,22 @@ export function VoiceInput({ draft, onChange, disabled, onBusyChange }) {
     transcribing: 'voiceTranscribing', done: 'voiceDone',
   }[state.phase]
   const elapsed = `${Math.floor(state.elapsed / 60)}:${String(state.elapsed % 60).padStart(2, '0')}`
+  const startText = startLabel || t('voiceStart')
 
   return (
     <div className="mt-3 space-y-2">
       <div className="flex flex-wrap items-center gap-2">
         {!busy && (
           <Button size="sm" disabled={disabled} onClick={() => session.current?.start()}
-            aria-controls="draft" aria-describedby={hintId} className="min-h-10 disabled:opacity-50">
+            aria-controls={targetId} aria-label={label ? `${startText}: ${label}` : undefined}
+            aria-describedby={hintId} className="min-h-10 disabled:opacity-50">
             <Mic aria-hidden="true" className="size-4 shrink-0 text-orange-600" />
-            {t('voiceStart')}
+            {startText}
           </Button>
         )}
         {recording && (
-          <Button size="sm" onClick={() => session.current?.stop()} aria-controls="draft"
+          <Button size="sm" onClick={() => session.current?.stop()} aria-controls={targetId}
+            aria-label={label ? `${t('voiceStop')}: ${label}` : undefined}
             className="h-auto min-h-10 border-orange-300 bg-orange-50 py-2 text-orange-700">
             <Square aria-hidden="true" className="size-3.5 shrink-0 fill-current" />
             {t('voiceStop')}
@@ -78,7 +84,7 @@ export function VoiceInput({ draft, onChange, disabled, onBusyChange }) {
         )}
         {!busy && <span className="text-[11px] text-stone-400">Whisper</span>}
       </div>
-      <p id={hintId} className="text-[11px] leading-relaxed text-stone-500">{t('voiceHint')}</p>
+      {!descriptionId && <p id={hintId} className="text-[11px] leading-relaxed text-stone-500">{t('voiceHint')}</p>}
       <div role="status" aria-live="polite" aria-atomic="true">
         {statusKey && (
           <p className="flex items-center gap-2 text-xs text-stone-600">
