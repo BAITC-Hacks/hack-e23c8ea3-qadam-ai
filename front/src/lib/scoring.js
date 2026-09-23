@@ -42,18 +42,33 @@ export const words = (t) => (t || '').trim().split(/\s+/).filter(Boolean).length
 export const quality = (t) => { const w = words(t); if (!w) return 0; if (w < 4) return 0.35; if (w < 10) return 0.7; return 1 }
 export const hasNumber = (t) => /\d/.test(t || '')
 export const hasContact = (t) => /@|\+?\d[\d\s()-]{6,}|t\.me|telegram|whatsapp/i.test(t || '')
+export const formatScoreDelta = (delta) => delta > 0 ? `+${delta}` : delta < 0 ? `−${Math.abs(delta)}` : '0'
 
 /** Returns i18n tip key (resolved in UI via useT). */
 export function tipFor(key, card, q) {
   if (q >= 1) return null
-  if (key === 'context') return !card.need?.trim() ? 'tip_context_need' : 'tip_context_more'
-  if (key === 'criteria' && card.criteria?.trim() && !hasNumber(card.criteria)) return 'tip_criteria_number'
+  if (key === 'context') return !card.need?.trim() || quality(card.context) >= 1 ? 'tip_context_need' : 'tip_context_more'
+  if (key === 'criteria' && quality(card.criteria) > 0.6 && !hasNumber(card.criteria)) return 'tip_criteria_number'
   if (key === 'contact') {
     if (!hasContact(card.contact)) return 'tip_contact_channel'
-    if (!card.format?.trim()) return 'tip_contact_format'
+    if (quality(card.format) < 1) return 'tip_contact_format'
   }
   const field = CARD_FIELDS.find((f) => f.crit === key)
   return !card[field.key]?.trim() ? `tip_fill_${field.key}` : 'tip_more'
+}
+
+// Potential for the stated action only; the other fields retain their current quality.
+function qualityAfterTip(key, card, tip) {
+  if (key === 'context') return tip === 'tip_context_need'
+    ? (quality(card.context) + 1) / 2
+    : (1 + quality(card.need)) / 2
+  if (key === 'contact') return tip === 'tip_contact_format'
+    ? Math.min(quality(card.contact), hasContact(card.contact) ? 1 : 0.5) * 0.6 + 0.4
+    : 0.6 + quality(card.format) * 0.4
+  if (key === 'criteria') return tip === 'tip_criteria_number'
+    ? quality(`${card.criteria} 0`)
+    : hasNumber(card.criteria) ? 1 : 0.6
+  return 1
 }
 
 /** Прозрачная формула: баллы = вес × качество поля (0 / 0.35 / 0.7 / 1). */
@@ -65,7 +80,9 @@ export function scoreCard(card) {
     else if (c.key === 'criteria') q = Math.min(quality(card.criteria), hasNumber(card.criteria) ? 1 : 0.6)
     else q = quality(card[c.key])
     const points = Math.round(c.weight * q)
-    return { ...c, points, tip: tipFor(c.key, card, points >= c.weight ? 1 : q) }
+    const tip = tipFor(c.key, card, points >= c.weight ? 1 : q)
+    const tipGain = tip ? Math.max(0, Math.round(c.weight * qualityAfterTip(c.key, card, tip)) - points) : 0
+    return { ...c, points, tip, tipGain }
   })
   return { total: parts.reduce((s, p) => s + p.points, 0), parts }
 }

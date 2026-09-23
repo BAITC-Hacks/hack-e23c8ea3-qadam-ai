@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { Check, Globe, Braces, RotateCcw } from 'lucide-react'
+import { Check, Globe, RotateCcw } from 'lucide-react'
 import { cx } from '../lib/cx.js'
 import ru from './ru.js'
 import kk from './kk.js'
@@ -73,7 +73,7 @@ export function LangSwitch({ className }) {
 }
 
 /** Mobile: кнопка «🌐 РУС» в шапке открывает нижнюю шторку-меню. */
-export function MobileMenu({ themeControl, onAI, onReset, onClose }) {
+export function MobileMenu({ themeControl, onReset, onClose }) {
   const t = useT()
   const { lang, setLang } = useLang()
   return (
@@ -94,7 +94,6 @@ export function MobileMenu({ themeControl, onAI, onReset, onClose }) {
         <div className="my-3 h-px bg-stone-200" />
         {themeControl}
         <div className="my-3 h-px bg-stone-200" />
-        <button type="button" onClick={() => { onAI(); onClose() }} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-stone-700 hover:bg-stone-100"><Braces className="size-4 text-orange-600" />{t('howAI')}</button>
         <button type="button" onClick={() => { onReset(); onClose() }} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm text-stone-500 hover:bg-stone-100"><RotateCcw className="size-4" />{t('reset')}</button>
       </div>
     </div>
