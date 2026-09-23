@@ -1,6 +1,17 @@
 export const INDUSTRIES = ['Ритейл', 'Логистика', 'Услуги', 'Финансы', 'HoReCa', 'Образование']
 export const MY_COMPANY = 'Qala Service'
 
+/** Отрасль хранится по-русски (данные), подпись берётся из i18n: t(industryKey(x)). */
+export const INDUSTRY_KEYS = { 'Ритейл': 'retail', 'Логистика': 'logistics', 'Услуги': 'services', 'Финансы': 'finance', 'HoReCa': 'horeca', 'Образование': 'education' }
+export const industryKey = (value) => (INDUSTRY_KEYS[value] ? `ind_${INDUSTRY_KEYS[value]}` : value)
+
+/** Companies a business user can act as (demo picker). */
+export const SEED_COMPANIES = [
+  { id: 'c-qala', name: MY_COMPANY, contactName: 'Айжан', roleLabelKey: 'managerRole' },
+  { id: 'c-dala', name: 'Dala Logistics', contactName: 'Айгерим', roleLabelKey: 'managerRole' },
+  { id: 'c-taza', name: 'Taza Market', contactName: 'Данияр', roleLabelKey: 'managerRole' },
+]
+
 export const SEED_DRAFTS = [
   { industry: 'Услуги', text: 'Нужен бот для записи клиентов в наш салон' },
   { industry: 'Ритейл', text: 'Хотим понять, почему клиенты перестают возвращаться' },

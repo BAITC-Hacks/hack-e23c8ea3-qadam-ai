@@ -1,12 +1,12 @@
 import { Braces, RotateCcw, Globe } from 'lucide-react'
 import { LangProvider, LangSwitch, MobileMenu, LANGS, useT, useLang } from './i18n/LangContext.jsx'
 import { QadamProvider, useQadam } from './store/useQadam.jsx'
-import { FONT_BODY, FONT_DISPLAY } from './lib/scoring.js'
-import { MY_COMPANY } from './data/seed.js'
+import { FONT_BODY } from './lib/scoring.js'
 import { cx } from './lib/cx.js'
 import { Brand } from './components/shell/Brand.jsx'
 import { RoleSwitch } from './components/shell/RoleSwitch.jsx'
 import { TeamPicker } from './components/shell/TeamPicker.jsx'
+import { CompanyPicker } from './components/shell/CompanyPicker.jsx'
 import { Toast } from './components/ui/Toast.jsx'
 import { RatingPanel } from './components/panels/RatingPanel.jsx'
 import { ImpactPanel } from './components/panels/ImpactPanel.jsx'
@@ -45,14 +45,10 @@ function Shell() {
               </button>
             ))}
           </nav>
-          {q.role === 'student' ? <TeamPicker teams={q.teams} teamId={q.teamId} onChange={q.setTeamId} className="mt-6" /> : (
-            <div className="mt-6 flex items-center gap-3 rounded-3xl border border-stone-200 bg-white p-3">
-              <div className="grid size-10 place-items-center rounded-full bg-orange-100 text-sm font-semibold text-orange-700" style={FONT_DISPLAY}>А</div>
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-stone-900">Айжан</div>
-                <div className="truncate text-xs text-stone-500">{t('managerRole')}, {MY_COMPANY}</div>
-              </div>
-            </div>
+          {q.role === 'student' ? (
+            <TeamPicker teams={q.teams} teamId={q.teamId} onChange={q.setTeamId} className="mt-6" />
+          ) : (
+            <CompanyPicker companies={q.companies} companyId={q.companyId} onChange={q.changeCompany} className="mt-6" />
           )}
           <div className="mt-auto space-y-3">
             <LangSwitch className="mb-4" />
@@ -80,6 +76,7 @@ function Shell() {
           <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
             <main className="min-w-0 flex-1 px-4 pb-6 pt-5 sm:px-6 lg:px-8 lg:pb-10 lg:pt-8">
               {q.role === 'student' && <TeamPicker teams={q.teams} teamId={q.teamId} onChange={q.setTeamId} className="mb-5 lg:hidden" compact />}
+              {q.role === 'business' && <CompanyPicker companies={q.companies} companyId={q.companyId} onChange={q.changeCompany} className="mb-5 lg:hidden" compact />}
 
               {q.view === 'builder' && (
                 <Builder
@@ -92,10 +89,27 @@ function Shell() {
                 />
               )}
               {q.view === 'catalog' && (
-                <Catalog tasks={q.ranked} proposals={q.proposals} role={q.role} team={q.myTeam} onOpen={q.setOpenTaskId} />
+                <Catalog
+                  tasks={q.ranked}
+                  proposals={q.proposals}
+                  role={q.role}
+                  team={q.myTeam}
+                  ready={q.ready}
+                  error={q.catalogError}
+                  onOpen={q.setOpenTaskId}
+                />
               )}
               {q.view === 'proposals' && (
-                <Proposals tasks={q.scored.filter((x) => x.owner)} proposals={q.proposals} teams={q.teams} milestones={q.milestones} onDecide={q.decide} onMilestone={q.confirmMilestone} newTaskId={q.newTaskId} />
+                <Proposals
+                  tasks={q.scored.filter((x) => x.owner)}
+                  proposals={q.proposals}
+                  teams={q.teams}
+                  milestones={q.milestones}
+                  decidingId={q.decidingId}
+                  onDecide={q.decide}
+                  onMilestone={q.confirmMilestone}
+                  newTaskId={q.newTaskId}
+                />
               )}
               {q.view === 'mine' && (
                 <MyProposals proposals={q.proposals.filter((p) => p.teamId === q.teamId)} tasks={q.scored} milestones={q.milestones} onOpen={q.setOpenTaskId} />
@@ -128,8 +142,16 @@ function Shell() {
       </nav>
 
       {q.openTask && (
-        <TaskDrawer task={q.openTask} role={q.role} team={q.myTeam} proposals={q.proposals} onClose={() => q.setOpenTaskId(null)}
-          onSubmit={q.submitProposal} onGoInbox={() => { q.setOpenTaskId(null); q.setView('proposals') }} />
+        <TaskDrawer
+          task={q.openTask}
+          role={q.role}
+          team={q.myTeam}
+          proposals={q.proposals}
+          submitting={q.submittingProposal}
+          onClose={() => q.setOpenTaskId(null)}
+          onSubmit={q.submitProposal}
+          onGoInbox={() => { q.setOpenTaskId(null); q.setView('proposals') }}
+        />
       )}
       {q.aiModal && <AIModal ai={q.ai} draft={q.draft} onClose={() => q.setAiModal(false)} />}
       {q.toast && <Toast {...q.toast} />}
