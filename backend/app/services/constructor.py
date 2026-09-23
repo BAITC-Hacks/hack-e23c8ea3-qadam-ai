@@ -24,10 +24,6 @@ UNKNOWN = {
     "нужно уточнить", "не уточнено", "уточним", "не указано",
     "не определено", "ещё не определили", "еще не определили",
 }
-QUESTION_WEIGHTS = {
-    "need": 20, "data": 20, "result": 15, "criteria": 15,
-    "users": 10, "constraints": 10, "contact": 10,
-}
 
 
 class StrictModel(BaseModel):
@@ -74,15 +70,8 @@ class ModelAnalysis(StrictModel):
             raise ValueError(
                 "questions must have unique fields and nonempty distinct text"
             )
-        if len(missing) >= 3:
-            selected = set(fields)
-            if not selected.issubset(missing):
-                raise ValueError("ask missing fields before refining known fields")
-            unselected = missing - selected
-            if unselected and max(QUESTION_WEIGHTS[f] for f in unselected) > min(
-                QUESTION_WEIGHTS[f] for f in selected
-            ):
-                raise ValueError("ask higher-weight missing fields first")
+        if len(missing) >= 3 and not set(fields).issubset(missing):
+            raise ValueError("ask missing fields before refining known fields")
         if len(missing) < 3 and not missing.issubset(fields):
             raise ValueError("include all missing fields before refinements")
         for question in self.questions:

@@ -80,6 +80,21 @@ def test_analyze_contract(client, provider):
     assert mock.call_args.kwargs["system"]
 
 
+def test_analyze_accepts_lower_weight_missing_questions_without_retry(client, provider):
+    result = analysis()
+    result["questions"] = [
+        {"field": "users", "text": "Кто будет пользоваться результатом?"},
+        {"field": "data", "text": "Какие данные о списаниях доступны?"},
+        {"field": "constraints", "text": "Какие ограничения нужно учесть?"},
+    ]
+    responses, mock = provider
+    responses.extend([copy.deepcopy(result), copy.deepcopy(result)])
+    r = client.post("/api/constructor/analyze", json={"draft": DRAFT})
+    assert r.status_code == 200
+    assert r.json() == {**result, "source": "ai"}
+    assert mock.call_count == 1
+
+
 @pytest.mark.parametrize(
     "bad",
     [
@@ -93,7 +108,6 @@ def test_analyze_contract(client, provider):
         "unsupported",
         "extra",
         "asks_known",
-        "lower_priority",
     ],
 )
 def test_invalid_analysis_retries_once(client, provider, bad):
@@ -116,8 +130,6 @@ def test_invalid_analysis_retries_once(client, provider, bad):
         result["questions"][0]["field"] = "budget"
     elif bad == "extra":
         result["rating"] = 100
-    elif bad == "lower_priority":
-        result["questions"][1]["field"] = "users"
     else:
         result["questions"][0]["field"] = "need"
     responses, mock = provider
