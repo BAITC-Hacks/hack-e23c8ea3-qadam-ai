@@ -3,9 +3,10 @@ import json
 from unittest.mock import Mock
 
 import pytest
+from fastapi.testclient import TestClient
+
 from app import llm
 from app.main import app
-from fastapi.testclient import TestClient
 
 FIELDS = ["need", "users", "data", "constraints", "result", "criteria", "contact"]
 DRAFT = "У нас небольшая пекарня, хотим сократить списания выпечки."
