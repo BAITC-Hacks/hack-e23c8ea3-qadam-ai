@@ -488,9 +488,14 @@ def test_contacts_removed_from_actual_sdk_messages(client, monkeypatch, route):
 
 @pytest.mark.parametrize("phone", [
     "+7.700.000.00.00", "7.700.000.00.00", "+7 (700) 000.00.00", "+7 700 000 00 00",
+    "77000000000",
 ])
-def test_phone_round_trip_through_card_route_and_sdk(client, monkeypatch, phone):
-    draft = f"Нужен отчет по продажам. Связь: {phone}."
+@pytest.mark.parametrize("prefix", [
+    "Связь:", "Дедлайн 23.09.2026.", "Дедлайн 23.09.2026",
+    "Дедлайн 2026-09-23.", "Дедлайн 2026.09.23.",
+])
+def test_phone_round_trip_through_card_route_and_sdk(client, monkeypatch, phone, prefix):
+    draft = f"Нужен отчет по продажам. {prefix} {phone}."
     monkeypatch.setattr(llm, "ai_available", lambda: True)
 
     def complete(**kwargs):
@@ -514,6 +519,25 @@ def test_phone_round_trip_through_card_route_and_sdk(client, monkeypatch, phone)
     assert phone not in sent
     assert "[[QADAM_CONTACT_" in sent
     assert "[phone]" not in sent
+
+
+def test_phone_sentence_does_not_consume_following_number():
+    mask = ContactMask()
+    text = "Связь 77000000000. 2 встречи в неделю."
+    redacted = mask.redact(text)
+    assert list(mask.values.values()) == ["77000000000"]
+    assert ". 2 встречи в неделю." in redacted
+    assert mask.restore(redacted) == text
+
+
+@pytest.mark.parametrize("phone", ["2026-09-23-45", "2026.09.23.45", "23.09.2026.123"])
+def test_date_shaped_phone_is_not_treated_as_a_date(phone):
+    mask = ContactMask()
+    text = f"Связь {phone}."
+    redacted = mask.redact(text)
+    assert list(mask.values.values()) == [phone]
+    assert phone not in redacted
+    assert mask.restore(redacted) == text
 
 
 @pytest.mark.parametrize("field", ["data", "need", "users", "constraints", "result", "criteria"])
@@ -652,13 +676,15 @@ def test_invented_unicode_contact_rejected(client, provider):
     assert provider[1].call_count == 2
 
 
-def test_invented_dotted_phone_rejected(client, provider):
+@pytest.mark.parametrize("prefix", ["Связь:", "Дедлайн 23.09.2026."])
+@pytest.mark.parametrize("phone", ["+7.700.000.00.00", "7.700.000.00.00", "77000000000"])
+def test_invented_phone_rejected(client, provider, prefix, phone):
     invalid = built_card()
-    invalid["card"]["context"] = "Связь: +7.700.000.00.00."
+    invalid["card"]["context"] = f"{prefix} {phone}."
     provider[0].extend([invalid, invalid])
     response = client.post("/api/constructor/card", json={"draft": DRAFT, "answers": {}})
     assert response.status_code == 503
-    assert "+7.700.000.00.00" not in response.text
+    assert phone not in response.text
     assert provider[1].call_count == 2
 
 

@@ -9,7 +9,7 @@ from typing import Literal, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app import llm
-from app.contact_context import is_monetary_number
+from app.contact_context import DATE_CANDIDATE, is_monetary_number
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -161,22 +161,22 @@ CONTACT_PATTERN = re.compile(
     r"(?<![\w.+%@-])[\w.+%-]++@[\w-]++(?:\.[\w-]++)+"
     r"|(?:https?://)?t\.me/[A-Za-z0-9_]+"
     r"|(?<!\w)@[A-Za-z][A-Za-z0-9_]{2,}"
+    rf"|(?P<date>{DATE_CANDIDATE})"
     # Поглощаем весь числовой кандидат даже при неверной длине, без перебора
     # его суффиксов. Конечные разделители/пунктуацию вернём неизменёнными.
-    r"|(?P<phone>(?<![\w+])\+?\d[\d ().-]*+)",
+    r"|(?P<phone>(?<![\w+])\+?\d(?:[\d ()-]|\.(?=\d))*+)",
     re.IGNORECASE,
 )
 CONTACT_TOKEN = re.compile(r"\[\[QADAM_CONTACT_[^\[\]\s]*\]\]")
-DATE_PREFIX = re.compile(
-    r"(?:\d{4}[-.]\d{2}[-.]\d{2}|\d{2}[-.]\d{2}[-.]\d{4})(?:$|[ ().])"
-)
 
 
 def _contact_value(match: re.Match[str]) -> str:
+    if match.group("date") is not None:
+        return ""
     if match.group("phone") is None:
         return match.group()
     value = match.group().rstrip(" ().-")
-    if DATE_PREFIX.match(value) or is_monetary_number(
+    if is_monetary_number(
         match.string, match.start(), match.start() + len(value)
     ):
         return ""

@@ -185,6 +185,34 @@ def test_monetary_context_survives_both_messages_without_disabling_phone_mask(co
     assert sent[1]["content"] == "Бюджет 1 000 000 000 тенге. Телефон: [phone]."
 
 
+@pytest.mark.parametrize("date", ["23.09.2026", "2026.09.23", "23-09-2026", "2026-09-23"])
+@pytest.mark.parametrize("separator", [" ", ". "])
+def test_date_does_not_hide_following_phone_from_sdk_or_logs(configured_adapter, date, separator):
+    fake = configured_adapter(completion(parsed=ModelAnswer(title="Forecast", count=3)))
+    prompt = f"Deadline {date}{separator}77000000000. 2 meetings."
+    system = f"Deadline {date}{separator}7.700.000.00.00."
+
+    llm.ask_json(prompt, ModelAnswer, system=system)
+
+    sent = fake.calls[0]["messages"]
+    assert sent[0]["content"] == f"Deadline {date}{separator}[phone]."
+    assert sent[1]["content"] == f"Deadline {date}{separator}[phone]. 2 meetings."
+    excerpt = llm._safe_excerpt(prompt)
+    assert "77000000000" not in excerpt
+    assert date in excerpt
+
+
+@pytest.mark.parametrize("phone", ["2026-09-23-45", "2026.09.23.45", "23.09.2026.123"])
+def test_date_shaped_phone_remains_masked(phone):
+    assert llm._mask_contacts(f"Contact {phone}.") == "Contact [phone]."
+
+
+@pytest.mark.parametrize("date", ["23.09.2026", "2026.09.23", "23-09-2026", "2026-09-23"])
+def test_date_with_time_remains_unchanged_in_adapter(date):
+    text = f"Deadline {date} 14:30. Budget 1 000 000 000 KZT."
+    assert llm._mask_contacts(text) == text
+
+
 def test_client_has_no_sdk_retries_and_at_most_twenty_second_timeout(
     configured_adapter, monkeypatch
 ):

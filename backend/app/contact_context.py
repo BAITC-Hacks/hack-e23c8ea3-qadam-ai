@@ -1,6 +1,12 @@
-"""Shared, bounded checks for explicit monetary context around numeric candidates."""
+"""Shared, bounded date and monetary context for numeric contact candidates."""
 
 import re
+
+# Consume a complete date separately, never a prefix of a longer phone number.
+DATE_CANDIDATE = (
+    r"(?<![\w+])(?:\d{4}[-.]\d{2}[-.]\d{2}|\d{2}[-.]\d{2}[-.]\d{4})"
+    r"(?!\w|[.-]\d)"
+)
 
 _CURRENCY = r"(?:тенге|тг|руб(?:лей|ля|ль)?|доллар(?:ов|а)?|евро|KZT|USD|EUR|RUB)\b|[₸₽$€]"
 _MONEY_BEFORE = re.compile(

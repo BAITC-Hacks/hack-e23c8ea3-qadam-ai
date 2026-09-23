@@ -14,7 +14,7 @@ import openai
 from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
 
-from app.contact_context import is_monetary_number
+from app.contact_context import DATE_CANDIDATE, is_monetary_number
 
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
@@ -29,7 +29,9 @@ T = TypeVar("T", bound=BaseModel)
 _client: openai.OpenAI | None = None
 _PROMPT_VARIABLE = re.compile(r"\{\{\s*(\w+)\s*\}\}")
 _EMAIL = re.compile(r"(?<![\w@])[\w.+%-]+@[\w.-]+\.[A-Za-z]{2,}(?![\w@])")
-_PHONE_CANDIDATE = re.compile(r"(?<![\w@])\+?\d[\d ().-]{6,}\d(?![\w@])")
+_PHONE_CANDIDATE = re.compile(
+    rf"(?P<date>{DATE_CANDIDATE})|(?<![\w@])\+?\d(?:[\d ()-]|\.(?=\d)){{6,}}\d(?![\w@])"
+)
 _TOKEN = re.compile(r"\bsk-[A-Za-z0-9_-]{8,}\b")
 _HANDLE = re.compile(r"(?<!\w)@[A-Za-z][A-Za-z0-9_]{4,}\b")
 _URL = re.compile(r"https?://\S+")
@@ -61,6 +63,8 @@ def _mask_contacts(value: str) -> str:
     value = _EMAIL.sub("[email]", value)
 
     def mask_phone(match: re.Match[str]) -> str:
+        if match.group("date") is not None:
+            return match.group()
         digits = sum(character.isdigit() for character in match.group())
         if 10 <= digits <= 15 and not is_monetary_number(value, match.start(), match.end()):
             return "[phone]"
