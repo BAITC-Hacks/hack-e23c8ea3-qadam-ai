@@ -9,6 +9,7 @@ from typing import Literal, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from app import llm
+from app.contact_context import is_monetary_number
 from app.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
@@ -175,7 +176,9 @@ def _contact_value(match: re.Match[str]) -> str:
     if match.group("phone") is None:
         return match.group()
     value = match.group().rstrip(" ().-")
-    if DATE_PREFIX.match(value):
+    if DATE_PREFIX.match(value) or is_monetary_number(
+        match.string, match.start(), match.start() + len(value)
+    ):
         return ""
     # Не выделяем телефон внутри идентификатора вида 77000000000abc.
     if match.end() < len(match.string) and match.group() == value:

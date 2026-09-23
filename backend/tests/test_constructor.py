@@ -574,6 +574,74 @@ def test_contact_fallback_combines_draft_and_answers_but_respects_explicit(clien
     )
 
 
+@pytest.mark.parametrize("location", ["draft", "answer"])
+@pytest.mark.parametrize("amount", [
+    "Бюджет 1 000 000 000 тенге.",
+    "Бюджет: 1000000000.",
+    "Стоимость 1 000 000 000,50 тенге.",
+    "Доступно 1000000000 KZT.",
+    "Budget: $1 000 000 000.",
+])
+def test_budget_is_preserved_through_card_route_and_sdk(client, monkeypatch, location, amount):
+    draft = "Нужен отчет по продажам."
+    answers = {}
+    if location == "draft":
+        draft += " " + amount
+    else:
+        answers["constraints"] = amount
+    monkeypatch.setattr(llm, "ai_available", lambda: True)
+
+    def complete(**kwargs):
+        payload = json.loads(kwargs["messages"][1]["content"])
+        result = built_card()
+        result["card"]["context"] = payload["draft"]
+        result["card"]["constraints"] = payload["answers"].get("constraints")
+        return SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(
+            parsed=kwargs["response_format"].model_validate(result), refusal=None,
+        ))])
+
+    parse = Mock(side_effect=complete)
+    sdk = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(parse=parse)))
+    monkeypatch.setattr(llm, "_get_client", lambda: sdk)
+    response = client.post("/api/constructor/card", json={"draft": draft, "answers": answers})
+
+    assert response.status_code == 200
+    parse.assert_called_once()
+    result = response.json()
+    assert result["card"]["contact"] == ""
+    assert result["card"]["context"] == draft
+    if location == "answer":
+        assert result["card"]["constraints"] == amount
+    assert any(w.startswith("contact: сведения не уточнены") for w in result["warnings"])
+    sent = parse.call_args.kwargs["messages"][1]["content"]
+    assert amount in sent
+    assert "[phone]" not in sent and "[[QADAM_CONTACT_" not in sent
+
+
+@pytest.mark.parametrize("phone", ["+7 700 000 00 00", "+7.700.000.00.00", "77000000000"])
+def test_budget_does_not_hide_real_contact_in_other_answer(client, provider, phone):
+    draft = "Нужен отчет по продажам. Бюджет 1 000 000 000 тенге."
+    answer = f"Бюджет согласован. CSV пришлет администратор, телефон {phone}."
+
+    def echo(payload):
+        result = built_card()
+        result["card"]["context"] = payload["draft"]
+        result["card"]["data"] = payload["answers"]["data"]
+        return result
+
+    provider[0].append(echo)
+    response = client.post("/api/constructor/card", json={
+        "draft": draft, "answers": {"data": answer},
+    })
+    assert response.status_code == 200
+    assert response.json()["card"]["contact"] == phone
+    assert response.json()["card"]["context"] == draft
+    assert response.json()["card"]["data"] == answer
+    sent = provider[1].call_args.args[0]
+    assert "1 000 000 000 тенге" in sent
+    assert phone not in sent
+
+
 def test_invented_unicode_contact_rejected(client, provider):
     invalid = built_card()
     invalid["warnings"] = ["contact: invented@пример.рф"]

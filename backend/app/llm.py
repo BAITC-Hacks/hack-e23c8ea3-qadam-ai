@@ -14,6 +14,8 @@ import openai
 from dotenv import load_dotenv
 from pydantic import BaseModel, ValidationError
 
+from app.contact_context import is_monetary_number
+
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 log = logging.getLogger(__name__)
@@ -60,7 +62,9 @@ def _mask_contacts(value: str) -> str:
 
     def mask_phone(match: re.Match[str]) -> str:
         digits = sum(character.isdigit() for character in match.group())
-        return "[phone]" if 10 <= digits <= 15 else match.group()
+        if 10 <= digits <= 15 and not is_monetary_number(value, match.start(), match.end()):
+            return "[phone]"
+        return match.group()
 
     return _PHONE_CANDIDATE.sub(mask_phone, value)
 

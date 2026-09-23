@@ -173,6 +173,18 @@ def test_email_and_phone_are_masked_in_both_messages(configured_adapter, caplog)
     assert "[phone]" in sent
 
 
+def test_monetary_context_survives_both_messages_without_disabling_phone_mask(configured_adapter):
+    fake = configured_adapter(completion(parsed=ModelAnswer(title="Forecast", count=3)))
+    prompt = "Бюджет 1 000 000 000 тенге. Телефон: +7.700.000.00.00."
+    system = "Budget: $1000000000. Contact: +1 415 555 2671."
+
+    llm.ask_json(prompt, ModelAnswer, system=system)
+
+    sent = fake.calls[0]["messages"]
+    assert sent[0]["content"] == "Budget: $1000000000. Contact: [phone]."
+    assert sent[1]["content"] == "Бюджет 1 000 000 000 тенге. Телефон: [phone]."
+
+
 def test_client_has_no_sdk_retries_and_at_most_twenty_second_timeout(
     configured_adapter, monkeypatch
 ):
