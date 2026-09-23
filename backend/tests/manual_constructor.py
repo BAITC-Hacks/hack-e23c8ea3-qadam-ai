@@ -10,14 +10,14 @@ from pathlib import Path
 
 from app import llm
 from app.schemas import AnalyzeRequest, BuildCardRequest
-from app.services.constructor import analyze, build_card
+from app.services.constructor import InputScopeError, analyze, build_card
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--suite", choices=["quality", "security"], default="quality",
-        help="Пять примеров качества или пять примеров безопасности",
+        "--suite", choices=["quality", "security", "scope"], default="quality",
+        help="Примеры качества, безопасности или границ бизнес-темы",
     )
     parser.add_argument(
         "--live",
@@ -31,7 +31,11 @@ def main():
         parser.error(
             "ИИ недоступен: настройте ключ, модель и AI_MODE=auto локально; не передавайте ключ в командной строке"
         )
-    fixture = "constructor_security_cases.json" if args.suite == "security" else "constructor_cases.json"
+    fixture = {
+        "quality": "constructor_cases.json",
+        "security": "constructor_security_cases.json",
+        "scope": "constructor_scope_cases.json",
+    }[args.suite]
     cases = json.loads((Path(__file__).parent / "fixtures" / fixture).read_text())
     report = {"model": llm.model_name(), "suite": args.suite, "cases": []}
     for case in cases:
@@ -54,6 +58,8 @@ def main():
         ]:
             try:
                 item[operation] = call(request).model_dump()
+            except InputScopeError as exc:
+                item[operation] = {"scope_message": str(exc)}
             except llm.LLMError:
                 item[operation] = {
                     "error": "Провайдер или проверка ответа не прошли; нужен ручной разбор."

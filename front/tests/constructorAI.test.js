@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { analyzeWithFallback, aiStateFromAnalysis, cardWithFallback } from '../src/lib/constructorAI.js'
+import { analyzeWithAI, aiStateFromAnalysis, cardWithAI } from '../src/lib/constructorAI.js'
 import { isValidSession } from '../src/lib/catalog.js'
 import { SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS } from '../src/data/seed.js'
 
@@ -33,8 +33,8 @@ test('both constructor requests use AI responses, including question text and wa
     calls.push([path, JSON.parse(options.body)])
     return json(path.endsWith('/analyze') ? analysis : built)
   })
-  const first = await analyzeWithFallback(input)
-  const second = await cardWithFallback({ ...input, answers })
+  const first = await analyzeWithAI(input)
+  const second = await cardWithAI({ ...input, answers })
   assert.deepEqual(first, analysis)
   assert.deepEqual(second, built)
   assert.deepEqual(calls, [
@@ -52,19 +52,12 @@ test('AI and fallback analyses both survive saved-session validation', () => {
   }
 })
 
-test('invalid AI responses independently switch each step to the local stub', async (t) => {
+test('invalid AI responses stop both steps without creating a stub card', async (t) => {
   t.mock.method(globalThis, 'fetch', async (path) => json(path.endsWith('/analyze')
     ? { ...analysis, source: 'stub' }
     : { ...built, card: { ...built.card, owner: true } }))
-  const first = await analyzeWithFallback(input)
-  const second = await cardWithFallback({ ...input, answers })
-  assert.equal(first.source, 'stub')
-  assert.ok(first.questions.length >= 3)
-  assert.equal(second.source, 'stub')
-  assert.equal(second.card.context, draft)
-  assert.equal(second.card.need, answers.need)
-  assert.equal(second.card.data, answers.data)
-  assert.equal(second.card.owner, undefined)
+  await assert.rejects(analyzeWithAI(input), { kind: 'invalid-response' })
+  await assert.rejects(cardWithAI({ ...input, answers }), { kind: 'invalid-response' })
 })
 
 for (const [name, response] of [
@@ -74,23 +67,22 @@ for (const [name, response] of [
   ['damaged JSON', () => new Response('{broken', { status: 200 })],
   ['timeout', () => new Promise(() => {})],
 ]) {
-  test(`${name} switches both steps to stub and retains the user text`, async (t) => {
+  test(`${name} stops both steps and leaves the input unchanged`, async (t) => {
     t.mock.method(globalThis, 'fetch', response)
     const options = name === 'timeout' ? { timeoutMs: 5 } : undefined
-    const first = await analyzeWithFallback(input, options)
-    const second = await cardWithFallback({ ...input, answers }, options)
-    assert.equal(first.source, 'stub')
-    assert.equal(second.source, 'stub')
-    assert.equal(second.card.context, draft)
-    assert.equal(second.card.need, answers.need)
+    const payload = { ...input, answers: { ...answers } }
+    const before = structuredClone(payload)
+    await assert.rejects(analyzeWithAI(input, options))
+    await assert.rejects(cardWithAI(payload, options))
+    assert.deepEqual(payload, before)
   })
 }
 
 test('422 remains an input error, without silently switching to the stub', async (t) => {
   t.mock.method(globalThis, 'fetch', async () => json({ error: 'Черновик слишком короткий' }, 422))
   for (const request of [
-    analyzeWithFallback(input),
-    cardWithFallback({ ...input, answers }),
+    analyzeWithAI(input),
+    cardWithAI({ ...input, answers }),
   ]) {
     await assert.rejects(request, { kind: 'http', status: 422, message: 'Черновик слишком короткий' })
   }
@@ -102,5 +94,21 @@ test('cancellation does not replace a pending AI result with stub data', async (
     controller.abort()
     return new Promise(() => {})
   })
-  await assert.rejects(analyzeWithFallback(input, { signal: controller.signal }), { kind: 'aborted' })
+  await assert.rejects(analyzeWithAI(input, { signal: controller.signal }), { kind: 'aborted' })
+})
+
+test('scope messages reach the caller even for two-word inputs', async (t) => {
+  const calls = []
+  const message = 'Я помогаю с бизнес-идеями и задачами для студенческих команд.'
+  t.mock.method(globalThis, 'fetch', async (_path, options) => {
+    calls.push(JSON.parse(options.body))
+    return json({ error: message }, 422)
+  })
+  for (const draft of ['хочу денег', 'хочу умереть', 'расскажи анекдот']) {
+    await assert.rejects(analyzeWithAI({ draft, industry: 'Услуги' }), {
+      kind: 'http', status: 422, message,
+    })
+  }
+  assert.equal(calls.length, 3)
+  assert.equal(calls[0].draft, 'хочу денег')
 })

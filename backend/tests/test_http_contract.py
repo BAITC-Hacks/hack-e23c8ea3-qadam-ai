@@ -122,17 +122,17 @@ def test_app_starts_without_key_and_reports_ai_unavailable(monkeypatch, caplog):
 @pytest.mark.parametrize(
     ("path", "payload"),
     [
-        ("/analyze", {"draft": "two words", "industry": "Услуги"}),
-        ("/card", {"draft": "two words", "industry": "Услуги", "answers": {}}),
+        ("/analyze", {"draft": "  ", "industry": "Услуги"}),
+        ("/card", {"draft": "  ", "industry": "Услуги", "answers": {}}),
     ],
 )
-def test_short_draft_returns_uniform_422(contract_client, path, payload):
+def test_empty_draft_returns_uniform_422(contract_client, path, payload):
     response = contract_client.post(path, json=payload)
 
     assert response.status_code == 422
     assert set(response.json()) == {"error"}
     assert "draft" in response.json()["error"]
-    assert "3" in response.json()["error"]
+    assert "Напишите" in response.json()["error"]
 
 
 def test_missing_answers_and_malformed_json_return_uniform_422(contract_client):

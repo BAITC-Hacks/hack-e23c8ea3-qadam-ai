@@ -4,7 +4,7 @@ import json
 import logging
 import re
 import secrets
-from typing import TypeVar
+from typing import Literal, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
@@ -24,6 +24,37 @@ UNKNOWN = {
     "нужно уточнить", "не уточнено", "уточним", "не указано",
     "не определено", "ещё не определили", "еще не определили",
 }
+Intent = Literal["business_task", "business_coaching", "off_topic", "needs_support"]
+SCOPE_MESSAGES = {
+    "off_topic": (
+        "Я помогаю с бизнес-идеями и задачами для студенческих команд. "
+        "Эта тема выходит за рамки моей роли. Расскажите, чем вы занимаетесь "
+        "или какую бизнес-идею хотите развить — начнём с этого."
+    ),
+    "needs_support": (
+        "Мне жаль, что вам сейчас так тяжело. Пожалуйста, свяжитесь с близким "
+        "человеком или специалистом по психическому здоровью. Если вы можете "
+        "причинить себе вред прямо сейчас, позвоните в местную экстренную службу "
+        "и постарайтесь не оставаться в одиночестве."
+    ),
+    "business_coaching": (
+        "Давайте сначала превратим желание в конкретную бизнес-задачу. "
+        "Дополните ответы: чем вы занимаетесь или хотите заняться, кому хотите "
+        "помогать и какую проблему этих людей можете решить. После этого "
+        "соберём карточку без выдуманных условий."
+    ),
+}
+
+
+class InputScopeError(Exception):
+    """Осмысленный ответ вне сценария сборки, а не сбой AI."""
+
+
+def _check_scope(intent: Intent, *, building: bool = False) -> None:
+    if intent in {"off_topic", "needs_support"} or (
+        building and intent == "business_coaching"
+    ):
+        raise InputScopeError(SCOPE_MESSAGES[intent])
 
 
 class StrictModel(BaseModel):
@@ -46,12 +77,24 @@ class ModelQuestion(StrictModel):
 
 
 class ModelAnalysis(StrictModel):
+    intent: Intent
     detected: Detected
     missing: list[QuestionField]
-    questions: list[ModelQuestion] = Field(min_length=3, max_length=5)
+    questions: list[ModelQuestion] = Field(max_length=5)
 
     @model_validator(mode="after")
     def validate_questions(self):
+        if self.intent in {"off_topic", "needs_support"}:
+            if (
+                any(self.detected.model_dump().values())
+                or set(self.missing) != set(Detected.model_fields)
+                or len(self.missing) != len(Detected.model_fields)
+                or self.questions
+            ):
+                raise ValueError("out-of-scope input must not create business questions")
+            return self
+        if len(self.questions) < 3:
+            raise ValueError("business input requires at least three questions")
         missing = set(self.missing)
         expected = {
             key for key, present in self.detected.model_dump().items() if not present
@@ -96,8 +139,18 @@ class ModelCard(StrictModel):
 
 
 class ModelBuild(StrictModel):
+    intent: Intent
     card: ModelCard
     warnings: list[str]
+
+    @model_validator(mode="after")
+    def validate_scope(self):
+        if self.intent != "business_task" and (
+            any(value is not None for value in self.card.model_dump().values())
+            or self.warnings
+        ):
+            raise ValueError("input without a business task must not create a card")
+        return self
 
 
 # Ограниченная маскировка, не полноценное распознавание персональных данных.
@@ -175,7 +228,7 @@ T = TypeVar("T", bound=BaseModel)
 def _ensure_ai_available() -> None:
     if not llm.ai_available():
         raise llm.LLMError(
-            "ИИ недоступен. Используйте локальную заглушку или ручное заполнение."
+            "ИИ сейчас недоступен. Ваш текст сохранён; попробуйте ещё раз позже."
         )
 
 
@@ -197,7 +250,7 @@ def _ask(name: str, payload: dict, schema: type[T], mask: ContactMask) -> T:
                 type(exc).__name__,
             )
     raise llm.LLMError(
-        "Не удалось получить корректный ответ ИИ. Используйте локальную заглушку или ручное заполнение."
+        "Не удалось получить корректный ответ ИИ. Ваш текст сохранён; попробуйте ещё раз."
     )
 
 
@@ -209,7 +262,8 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         "industry": mask.redact(request.industry),
     }
     result = _ask("analyze", payload, ModelAnalysis, mask)
-    return AnalyzeResponse(**result.model_dump(), source="ai")
+    _check_scope(result.intent)
+    return AnalyzeResponse(**result.model_dump(exclude={"intent"}), source="ai")
 
 
 def _text(value: str | None) -> str:
@@ -234,6 +288,7 @@ def build_card(request: BuildCardRequest) -> BuildCardResponse:
         },
     }
     result = _ask("card", payload, ModelBuild, mask)
+    _check_scope(result.intent, building=True)
     values = {
         key: mask.restore(_text(value))
         for key, value in result.card.model_dump().items()

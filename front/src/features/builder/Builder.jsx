@@ -16,7 +16,7 @@ import { INDUSTRIES, SEED_DRAFTS, industryKey } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
 export function Builder(p) {
-  const { step, setStep, draft, setDraft, industry, setIndustry, ai, thinking, runAnalysis, answers, setAnswers, buildCard, card, setCard, confirmed, setConfirmed, publish, live, resetBuilder } = p
+  const { step, setStep, draft, setDraft, industry, setIndustry, ai, thinking, aiMessage, runAnalysis, answers, setAnswers, buildCard, card, setCard, confirmed, setConfirmed, publish, live, resetBuilder } = p
   const t = useT()
   const [voiceCoordinator] = useState(createVoiceCoordinator)
   const [activeVoiceTarget, setActiveVoiceTarget] = useState(null)
@@ -90,6 +90,8 @@ export function Builder(p) {
               </div>
             </div>
           </Panel>
+
+          {aiMessage && <AssistantReply message={aiMessage} />}
 
           {thinking ? (
             <div className="space-y-2">{[0, 1, 2].map((i) => <div key={i} className="q-shimmer h-14 rounded-xl" />)}</div>
@@ -166,6 +168,8 @@ export function Builder(p) {
               </div>
             )
           })}
+
+          {aiMessage && <AssistantReply message={aiMessage} />}
 
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="quiet" onClick={() => setStep(1)}><ArrowLeft className="size-4" /> {t('editDraft')}</Button>
@@ -245,6 +249,14 @@ export function Builder(p) {
           </Panel>
         </div>
       )}
+    </div>
+  )
+}
+
+function AssistantReply({ message }) {
+  return (
+    <div role="status" aria-live="polite">
+      <AssistantBubble><p className="text-[15px] leading-relaxed text-stone-900">{message}</p></AssistantBubble>
     </div>
   )
 }

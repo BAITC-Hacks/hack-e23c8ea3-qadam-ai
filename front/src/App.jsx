@@ -83,7 +83,7 @@ function Shell() {
                 <Builder
                   key={`${q.companyId}:${q.builderRevision}`}
                   step={q.step} setStep={q.setStep} draft={q.draft} setDraft={q.setDraft}
-                  industry={q.industry} setIndustry={q.setIndustry} ai={q.ai} thinking={q.thinking}
+                  industry={q.industry} setIndustry={q.setIndustry} ai={q.ai} thinking={q.thinking} aiMessage={q.aiMessage}
                   runAnalysis={q.runAnalysis} answers={q.answers} setAnswers={q.setAnswers}
                   buildCard={q.buildCard} card={q.card} setCard={q.setCard}
                   confirmed={q.confirmed} setConfirmed={q.setConfirmed} publish={q.publish}

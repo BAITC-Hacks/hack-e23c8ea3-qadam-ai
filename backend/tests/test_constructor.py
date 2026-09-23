@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app import llm
 from app.main import app
-from app.services.constructor import ContactMask
+from app.services.constructor import SCOPE_MESSAGES, ContactMask
 
 FIELDS = ["need", "users", "data", "constraints", "result", "criteria", "contact"]
 DRAFT = "У нас небольшая пекарня, хотим сократить списания выпечки."
@@ -18,6 +18,7 @@ DRAFT = "У нас небольшая пекарня, хотим сократи�
 
 def analysis():
     return {
+        "intent": "business_task",
         "detected": {field: field == "need" for field in FIELDS},
         "missing": [field for field in FIELDS if field != "need"],
         "questions": [
@@ -30,6 +31,7 @@ def analysis():
 
 def built_card():
     return {
+        "intent": "business_task",
         "card": {
             "title": "Планирование выпечки",
             "context": DRAFT,
@@ -78,7 +80,7 @@ def test_analyze_contract(client, provider):
         "/api/constructor/analyze", json={"draft": DRAFT, "industry": "HoReCa"}
     )
     assert r.status_code == 200
-    assert r.json() == {**analysis(), "source": "ai"}
+    assert r.json() == {**{k: v for k, v in analysis().items() if k != "intent"}, "source": "ai"}
     assert mock.call_count == 1
     assert json.loads(mock.call_args.args[0])["draft"] == DRAFT
     assert mock.call_args.kwargs["system"]
@@ -95,7 +97,7 @@ def test_analyze_accepts_lower_weight_missing_questions_without_retry(client, pr
     responses.extend([copy.deepcopy(result), copy.deepcopy(result)])
     r = client.post("/api/constructor/analyze", json={"draft": DRAFT})
     assert r.status_code == 200
-    assert r.json() == {**result, "source": "ai"}
+    assert r.json() == {**{k: v for k, v in result.items() if k != "intent"}, "source": "ai"}
     assert mock.call_count == 1
 
 
@@ -290,9 +292,9 @@ def test_redacted_context_restored_from_original_only(client, provider):
 
 
 @pytest.mark.parametrize("route", ["analyze", "card"])
-def test_short_draft_rejected_without_model_call(client, provider, route):
+def test_empty_draft_rejected_without_model_call(client, provider, route):
     r = client.post(
-        f"/api/constructor/{route}", json={"draft": "  два слова  ", "answers": {}}
+        f"/api/constructor/{route}", json={"draft": "  \n  ", "answers": {}}
     )
     assert r.status_code == 422 and set(r.json()) == {"error"}
     provider[1].assert_not_called()
@@ -437,7 +439,7 @@ for text in samples:
     mask = ContactMask()
     redacted = mask.redact(text)
     assert mask.restore(redacted) == text
-    result = ModelBuild(card=dict.fromkeys(
+    result = ModelBuild(intent="business_task", card=dict.fromkeys(
         ["title", "context", "need", "users", "data", "constraints", "result",
          "criteria", "format"], redacted), warnings=[redacted])
     mask.check_output(result)
@@ -513,3 +515,91 @@ def test_html_from_model_remains_json_text(client, provider):
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/json"
     assert response.json()["card"]["context"] == html
+
+
+def scoped_response(route, intent):
+    if route == "analyze":
+        return {
+            "intent": intent, "detected": dict.fromkeys(FIELDS, False),
+            "missing": FIELDS, "questions": [],
+        }
+    return {
+        "intent": intent, "card": dict.fromkeys(built_card()["card"], None),
+        "warnings": [],
+    }
+
+
+@pytest.mark.parametrize("route", ["analyze", "card"])
+@pytest.mark.parametrize(
+    ("draft", "intent"),
+    [("расскажи анекдот", "off_topic"), ("хочу умереть", "needs_support")],
+)
+def test_scope_response_stops_without_questions_or_card(client, provider, route, draft, intent):
+    provider[0].append(scoped_response(route, intent))
+    response = client.post(f"/api/constructor/{route}", json={"draft": draft, "answers": {}})
+    assert response.status_code == 422
+    assert response.json() == {"error": SCOPE_MESSAGES[intent]}
+    assert provider[1].call_count == 1
+
+
+def test_two_word_business_wish_can_start_coaching(client, provider):
+    result = scoped_response("analyze", "business_coaching")
+    result["questions"] = [
+        {"field": "need", "text": "Давайте уточним идею. Чем вы занимаетесь и в чём есть опыт?"},
+        {"field": "users", "text": "Кому вы хотите помогать и какую проблему этих людей понимаете?"},
+        {"field": "data", "text": "Какие навыки, время и ресурсы у вас есть для начала?"},
+    ]
+    provider[0].append(result)
+    response = client.post("/api/constructor/analyze", json={"draft": "хочу денег"})
+    assert response.status_code == 200
+    assert response.json()["questions"] == result["questions"]
+    assert not any(response.json()["detected"].values())
+    assert set(response.json()) == {"detected", "missing", "questions", "source"}
+    assert provider[1].call_count == 1
+
+
+def test_unresolved_coaching_cannot_create_a_card(client, provider):
+    provider[0].append(scoped_response("card", "business_coaching"))
+    response = client.post("/api/constructor/card", json={
+        "draft": "Хочу очень много денег", "answers": {"need": "Не знаю"},
+    })
+    assert response.status_code == 422
+    assert response.json() == {"error": SCOPE_MESSAGES["business_coaching"]}
+    assert provider[1].call_count == 1
+
+
+def test_coaching_answers_can_supply_a_real_business_task(client, provider):
+    provider[0].append(built_card())
+    response = client.post("/api/constructor/card", json={
+        "draft": "хочу денег", "answers": {
+            "need": DRAFT, "users": "Пекарь", "data": "CSV продаж и списаний",
+        },
+    })
+    assert response.status_code == 200
+    assert response.json()["card"]["need"] == built_card()["card"]["need"]
+    assert provider[1].call_count == 1
+
+
+def test_personal_crisis_in_answers_also_stops_building(client, provider):
+    provider[0].append(scoped_response("card", "needs_support"))
+    response = client.post("/api/constructor/card", json={
+        "draft": DRAFT, "answers": {"need": "Я хочу умереть"},
+    })
+    assert response.status_code == 422
+    assert response.json() == {"error": SCOPE_MESSAGES["needs_support"]}
+
+
+@pytest.mark.parametrize("route", ["analyze", "card"])
+@pytest.mark.parametrize("defect", ["missing_intent", "unknown_intent", "business_content_in_refusal"])
+def test_scope_decision_must_be_valid_before_public_response(client, provider, route, defect):
+    result = analysis() if route == "analyze" else built_card()
+    if defect == "missing_intent":
+        del result["intent"]
+    elif defect == "unknown_intent":
+        result["intent"] = "bypass"
+    else:
+        result["intent"] = "off_topic"
+    provider[0].extend([result, result])
+    response = client.post(f"/api/constructor/{route}", json={"draft": DRAFT, "answers": {}})
+    assert response.status_code == 503
+    assert provider[1].call_count == 2
