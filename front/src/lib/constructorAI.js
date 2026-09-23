@@ -20,6 +20,10 @@ export function aiStateFromAnalysis(data, input) {
   return { data, source: data.source, raw: JSON.stringify(data), valid: data.source === 'ai', input, card: null }
 }
 
+export function answersAfterDraftChange(previousDraft, nextDraft, currentAnswers) {
+  return previousDraft === nextDraft ? currentAnswers : {}
+}
+
 export function cardWithFallback(input, options) {
   return withFallback(buildTaskCard, input, 'card', buildLocalTaskCard, options)
 }

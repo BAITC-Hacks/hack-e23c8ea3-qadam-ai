@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { PenLine, LayoutGrid, Inbox, Send } from 'lucide-react'
 import { scoreCard, words } from '../lib/scoring.js'
-import { analyzeWithFallback, aiStateFromAnalysis, cardWithFallback } from '../lib/constructorAI.js'
+import { analyzeWithFallback, aiStateFromAnalysis, answersAfterDraftChange, cardWithFallback } from '../lib/constructorAI.js'
 import {
   SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS, SEED_COMPANIES, EMPTY_CARD, MY_COMPANY,
 } from '../data/seed.js'
@@ -14,11 +14,6 @@ import {
 
 const QadamCtx = createContext(null)
 export const useQadam = () => useContext(QadamCtx)
-
-// oxlint-disable-next-line react/only-export-components
-export function answersAfterDraftChange(previousDraft, nextDraft, currentAnswers) {
-  return previousDraft === nextDraft ? currentAnswers : {}
-}
 
 const VIEWS = new Set(['builder', 'catalog', 'proposals', 'mine'])
 

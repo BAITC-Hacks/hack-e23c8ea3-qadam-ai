@@ -1,18 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { fileURLToPath } from 'node:url'
-import { createServer } from 'vite'
-import { cardWithFallback } from '../src/lib/constructorAI.js'
+import { answersAfterDraftChange, cardWithFallback } from '../src/lib/constructorAI.js'
 
 test('a replacement draft cannot inherit answers when card generation falls back', async (t) => {
-  const server = await createServer({
-    root: fileURLToPath(new URL('..', import.meta.url)),
-    configFile: false,
-    esbuild: { jsx: 'automatic' },
-    server: { middlewareMode: true, ws: false },
-  })
-  t.after(() => server.close())
-  const { answersAfterDraftChange } = await server.ssrLoadModule('/src/store/useQadam.jsx')
   t.mock.method(globalThis, 'fetch', async () => { throw new Error('API unavailable') })
 
   const oldDraft = 'Нужен бот для записи клиентов в салон'
