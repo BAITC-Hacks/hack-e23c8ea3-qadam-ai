@@ -7,6 +7,8 @@ import { Brand } from './components/shell/Brand.jsx'
 import { RoleSwitch } from './components/shell/RoleSwitch.jsx'
 import { TeamPicker } from './components/shell/TeamPicker.jsx'
 import { CompanyPicker } from './components/shell/CompanyPicker.jsx'
+import { ThemeToggle } from './components/shell/ThemeToggle.jsx'
+import { ThemeProvider } from './theme/ThemeProvider.jsx'
 import { Toast } from './components/ui/Toast.jsx'
 import { RatingPanel } from './components/panels/RatingPanel.jsx'
 import { ImpactPanel } from './components/panels/ImpactPanel.jsx'
@@ -24,14 +26,14 @@ function Shell() {
   const q = useQadam()
 
   return (
-    <div className="min-h-screen bg-[#F6F4F1] text-stone-700 antialiased selection:bg-orange-200" style={FONT_BODY}>
+    <div className="min-h-screen bg-canvas text-stone-700 antialiased selection:bg-orange-200" style={FONT_BODY}>
       <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-48 left-1/4 h-[520px] w-[520px] rounded-full bg-orange-200/40 blur-[140px]" />
-        <div className="absolute bottom-0 right-0 h-[380px] w-[380px] rounded-full bg-sky-200/40 blur-[140px]" />
+        <div className="absolute -top-48 left-1/4 h-[520px] w-[520px] rounded-full blur-[140px]" style={{ background: 'var(--q-glow-a)' }} />
+        <div className="absolute bottom-0 right-0 h-[380px] w-[380px] rounded-full blur-[140px]" style={{ background: 'var(--q-glow-b)' }} />
       </div>
 
       <div className="relative flex min-h-screen">
-        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200 bg-white/80 px-4 py-5 backdrop-blur-xl lg:flex">
+        <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-stone-200 bg-surface/80 px-4 py-5 backdrop-blur-xl lg:flex">
           <Brand />
           <RoleSwitch role={q.role} onChange={q.switchRole} className="mt-6" />
           <nav className="mt-6 space-y-1">
@@ -51,6 +53,7 @@ function Shell() {
             <CompanyPicker companies={q.companies} companyId={q.companyId} onChange={q.changeCompany} className="mt-6" />
           )}
           <div className="mt-auto space-y-3">
+            <ThemeToggle />
             <LangSwitch className="mb-4" />
             <button type="button" onClick={() => q.setAiModal(true)} className="flex w-full items-center gap-2.5 rounded-xl border border-stone-200 px-3 py-2.5 text-left text-xs text-stone-500 transition hover:border-orange-300 hover:text-stone-900">
               <Braces className="size-4 text-orange-600" /> {t('howAI')}
@@ -62,12 +65,12 @@ function Shell() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-stone-200 bg-white/85 px-4 py-3 backdrop-blur-xl lg:hidden">
+          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-stone-200 bg-surface/85 px-4 py-3 backdrop-blur-xl lg:hidden">
             <Brand compact />
             <div className="flex items-center gap-2">
               <RoleSwitch role={q.role} onChange={q.switchRole} compact />
               <button type="button" onClick={() => q.setMenuOpen(true)} aria-label={`${t('language')} · ${t('menu')}`}
-                className="flex h-9 items-center gap-1 rounded-full border border-stone-200 bg-white px-2.5 text-[11px] font-semibold text-stone-700">
+                className="flex h-9 items-center gap-1 rounded-full border border-stone-200 bg-surface px-2.5 text-[11px] font-semibold text-stone-700">
                 <Globe className="size-4 text-orange-600" />{LANGS.find((l) => l.code === lang).short}
               </button>
             </div>
@@ -128,14 +131,14 @@ function Shell() {
         </div>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-white/95 backdrop-blur-xl lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-stone-200 bg-surface/95 backdrop-blur-xl lg:hidden" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="mx-auto flex max-w-md">
           {q.nav.map((n) => (
             <button key={n.id} type="button" onClick={() => { q.setView(n.id); q.setOpenTaskId(null) }}
               className={cx('relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]', q.view === n.id ? 'text-orange-600' : 'text-stone-500')}>
               <n.icon className="size-5" />
               {n.label}
-              {!!n.badge && <span className="absolute right-[calc(50%-22px)] top-1.5 grid min-w-4 place-items-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-white">{n.badge}</span>}
+              {!!n.badge && <span className="absolute right-[calc(50%-22px)] top-1.5 grid min-w-4 place-items-center rounded-full bg-orange-500 px-1 text-[10px] font-bold text-on-accent">{n.badge}</span>}
             </button>
           ))}
         </div>
@@ -155,17 +158,19 @@ function Shell() {
       )}
       {q.aiModal && <AIModal ai={q.ai} draft={q.draft} onClose={() => q.setAiModal(false)} />}
       {q.toast && <Toast {...q.toast} />}
-      {q.menuOpen && <MobileMenu onAI={() => q.setAiModal(true)} onReset={q.resetDemo} onClose={() => q.setMenuOpen(false)} />}
+      {q.menuOpen && <MobileMenu themeControl={<ThemeToggle />} onAI={() => q.setAiModal(true)} onReset={q.resetDemo} onClose={() => q.setMenuOpen(false)} />}
     </div>
   )
 }
 
 export default function App() {
   return (
-    <LangProvider>
-      <QadamProvider>
-        <Shell />
-      </QadamProvider>
-    </LangProvider>
+    <ThemeProvider>
+      <LangProvider>
+        <QadamProvider>
+          <Shell />
+        </QadamProvider>
+      </LangProvider>
+    </ThemeProvider>
   )
 }

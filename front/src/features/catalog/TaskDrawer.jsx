@@ -35,8 +35,8 @@ export function TaskDrawer({ task, role, team, proposals, submitting, onClose, o
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-stone-900/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="q-in relative flex h-full w-full flex-col border-l border-stone-200 bg-white sm:max-w-xl">
+      <div className="absolute inset-0 bg-overlay/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="q-in relative flex h-full w-full flex-col border-l border-stone-200 bg-surface sm:max-w-xl">
         <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
           <div className="flex items-center gap-2 text-xs text-stone-500"><Building2 className="size-3.5" />{task.company} · {t(industryKey(task.industry))}</div>
           <button type="button" onClick={onClose} aria-label={t('close')} className="grid size-8 place-items-center rounded-lg text-stone-500 hover:bg-stone-100 hover:text-stone-900"><X className="size-4" /></button>
@@ -69,7 +69,7 @@ export function TaskDrawer({ task, role, team, proposals, submitting, onClose, o
           </dl>
         </div>
 
-        <div className="border-t border-stone-200 bg-white px-5 py-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
+        <div className="border-t border-stone-200 bg-surface px-5 py-4" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom, 0px))' }}>
           {role === 'business' ? (
             task.owner
               ? <Button variant="primary" className="w-full" onClick={onGoInbox}><Inbox className="size-4" />{t('taskProposals')} · {proposals.filter((p) => p.taskId === task.id).length}</Button>

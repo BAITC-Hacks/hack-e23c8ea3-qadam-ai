@@ -10,12 +10,12 @@ export function ScoreRing({ score, size = 160, stroke = 12, label = true }) {
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ece8e4" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--q-chart-track)" strokeWidth={stroke} />
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#f97316" strokeWidth={stroke} strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c * (1 - score / 100)}
           style={{ transition: 'stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)', filter: 'drop-shadow(0 4px 10px rgba(234,88,12,.25))' }} />
         {[40, 70, 90].map((tick) => (
-          <circle key={tick} cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ffffff" strokeWidth={stroke + 1}
+          <circle key={tick} cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-surface)" strokeWidth={stroke + 1}
             strokeDasharray={`1.5 ${c}`} strokeDashoffset={-(c * tick) / 100} />
         ))}
       </svg>

@@ -1,4 +1,5 @@
 export default {
+  themeLight: 'Light theme', themeDark: 'Dark theme',
   tagline: 'business and students, one step closer', business: 'Business', students: 'Students', youTeam: 'Your team',
   navNew: 'New task', navCatalog: 'Catalog', navInbox: 'Proposals', navMine: 'Our proposals',
   howAI: 'How the AI works', reset: 'Reset demo', language: 'Language', menu: 'Menu',

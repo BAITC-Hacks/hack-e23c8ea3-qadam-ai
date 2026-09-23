@@ -85,14 +85,14 @@ export function Catalog({ tasks, proposals, role, team, ready, error, onOpen }) 
           return (
             <li key={task.id}>
               <button type="button" onClick={() => onOpen(task.id)}
-                className={cx('q-in group flex w-full items-start gap-3 rounded-3xl border bg-white p-4 text-left backdrop-blur-xl transition sm:gap-4 sm:p-5',
+                className={cx('q-in group flex w-full items-start gap-3 rounded-3xl border bg-surface p-4 text-left backdrop-blur-xl transition sm:gap-4 sm:p-5',
                   l.key === 'priority' ? 'border-orange-300' : 'border-stone-200 hover:border-stone-300', task.isNew && 'ring-2 ring-orange-400/70')}
                 style={l.key === 'priority' ? { boxShadow: ACCENT_GLOW } : undefined}>
                 <span className="mt-1 w-6 shrink-0 text-center text-xs tabular-nums text-stone-400" style={FONT_MONO}>#{pos}</span>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
                     <LevelChip score={task.score} />
-                    {task.isNew && <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">{tr('badgeNew')}</span>}
+                    {task.isNew && <span className="rounded-full bg-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-accent">{tr('badgeNew')}</span>}
                     {task.owner && <span className="text-[11px] text-stone-500">{tr('yourTask')}</span>}
                   </div>
                   <div className="mt-2 text-[15px] font-medium text-stone-900 group-hover:text-orange-700">{task.title}</div>

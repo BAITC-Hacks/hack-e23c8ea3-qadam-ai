@@ -1,9 +1,91 @@
 @import "tailwindcss";
 
+/* Surfaces are separate from literal white text/icons on solid buttons. */
+@theme {
+  --color-canvas: #F6F4F1;
+  --color-surface: #ffffff;
+  --color-bubble: #292524;
+  --color-on-bubble: #fafaf9;
+  --color-on-accent: #ffffff;
+  --color-overlay: #292524;
+  --color-ring-track: #ece8e4;
+  --color-ring-tick: #ffffff;
+}
+
+:root {
+  color-scheme: light;
+  --q-chart-track: #ece8e4;
+  --q-shimmer-base: #efebe7;
+  --q-shimmer-highlight: #fde5d4;
+  --q-glow-a: rgba(254, 215, 170, 0.4);
+  --q-glow-b: rgba(186, 230, 253, 0.4);
+}
+
+/*
+  Dark = warm twin of the original light UI (same stone/orange language).
+  Not a blue dashboard: charcoal canvas, cream text, orange accent only.
+*/
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #1c1917;
+  --color-surface: #292524;
+  --color-bubble: #0c0a09;
+  --color-on-bubble: #fafaf9;
+  --color-on-accent: #1c1917;
+  --color-overlay: #0c0a09;
+  --color-ring-track: #44403c;
+  --color-ring-tick: #292524;
+
+  --color-stone-50: #1c1917;
+  --color-stone-100: #292524;
+  --color-stone-200: #44403c;
+  --color-stone-300: #57534e;
+  --color-stone-400: #a8a29e;
+  --color-stone-500: #a8a29e;
+  --color-stone-600: #d6d3d1;
+  --color-stone-700: #e7e5e4;
+  --color-stone-800: #f5f5f4;
+  --color-stone-900: #fafaf9;
+
+  --color-orange-50: #431407;
+  --color-orange-100: #7c2d12;
+  --color-orange-200: #9a3412;
+  --color-orange-300: #c2410c;
+  --color-orange-600: #fb923c;
+  --color-orange-700: #fdba74;
+
+  --color-emerald-50: #022c22;
+  --color-emerald-100: #064e3b;
+  --color-emerald-200: #065f46;
+  --color-emerald-700: #6ee7b7;
+
+  --color-amber-50: #451a03;
+  --color-amber-100: #78350f;
+  --color-amber-200: #92400e;
+  --color-amber-800: #fcd34d;
+
+  --color-rose-50: #4c0519;
+  --color-rose-100: #881337;
+  --color-rose-200: #9f1239;
+  --color-rose-300: #e11d48;
+  --color-rose-600: #fb7185;
+  --color-rose-700: #fda4af;
+
+  --color-sky-100: #0c4a6e;
+  --color-sky-200: #075985;
+  --color-sky-700: #7dd3fc;
+
+  --q-chart-track: #44403c;
+  --q-shimmer-base: #292524;
+  --q-shimmer-highlight: #7c2d12;
+  --q-glow-a: rgba(234, 88, 12, 0.18);
+  --q-glow-b: rgba(14, 165, 233, 0.12);
+}
+
 html,
 body {
-  background: #F6F4F1;
-  color-scheme: light;
+  background: var(--color-canvas);
+  color: var(--color-stone-700);
 }
 
 @keyframes q-in {
@@ -21,7 +103,7 @@ body {
 }
 
 .q-shimmer {
-  background: linear-gradient(90deg, #efebe7 25%, #fde5d4 50%, #efebe7 75%);
+  background: linear-gradient(90deg, var(--q-shimmer-base) 25%, var(--q-shimmer-highlight) 50%, var(--q-shimmer-base) 75%);
   background-size: 200% 100%;
   animation: q-shimmer 1.4s linear infinite;
 }

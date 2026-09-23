@@ -1,4 +1,5 @@
 export default {
+  themeLight: 'Светлая тема', themeDark: 'Тёмная тема',
   tagline: 'бизнес и студенты — шаг навстречу', business: 'Бизнес', students: 'Студенты', youTeam: 'Вы — команда',
   navNew: 'Новая задача', navCatalog: 'Каталог', navInbox: 'Отклики', navMine: 'Наши отклики',
   howAI: 'Как работает AI', reset: 'Сбросить демо', language: 'Язык', menu: 'Меню',
