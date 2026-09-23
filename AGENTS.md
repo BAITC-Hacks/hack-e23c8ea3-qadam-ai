@@ -31,7 +31,7 @@ AI Sana, «Единый кейс по геймификации практиче�
 
 ## Стек
 - Бэкенд: Python 3.11+, FastAPI, Pydantic, библиотека `openai`, pytest.
-- Фронтенд: React, Vite, TypeScript, Tailwind CSS, React Router. Только десктоп.
+- Фронтенд: React, Vite, JavaScript и TypeScript, Tailwind CSS, React Router. Компоненты могут быть `.jsx` или `.tsx`; общие типы — в TypeScript. Только десктоп.
 - Хранилище: JSON-файл `backend/data/db.json` (в `.gitignore`), создаётся из `backend/data/seed/*.json` при старте и при сбросе. Без БД.
 - ИИ: OpenAI через Chat Completions API. Ключ NVIDIA получить не удалось, поэтому NVIDIA не используем.
 - `.env` в корне: `OPENAI_API_KEY`, `OPENAI_MODEL`, `AI_MODE` (`auto` — OpenAI, если есть ключ, иначе заглушка; `stub` — всегда заглушка). Шаблон — `.env.example`.
@@ -41,7 +41,7 @@ AI Sana, «Единый кейс по геймификации практиче�
 Авторизации нет. В шапке переключатель: «Бизнес» с выбором компании или «Команда» с выбором студенческой команды. Выбор хранится в `localStorage`.
 
 ## Модель данных
-Единственный источник — `backend/app/schemas.py`, на фронтенде — `frontend/src/types.ts` с теми же полями. Меняешь модель — меняй оба файла и предупреди команду.
+Единственный источник — `backend/app/schemas.py`, на фронтенде — `front/src/types.ts` с теми же полями. Меняешь модель — меняй оба файла и предупреди команду.
 
 ```
 Card (все поля — строки, по умолчанию ""):
@@ -166,7 +166,7 @@ backend/
     prompts/*.md             # Марат
   data/seed/*.json           # Марат: businesses, drafts, tasks, teams, proposals
   tests/test_rating.py       # Айгерим
-frontend/src/
+front/src/
   types.ts, api/client.ts    # Арсен (общие файлы)
   components/                # Арсен: общий UI, LevelBadge, переключатель роли
   features/constructor/      # Марат: шаги «черновик» и «вопросы»
@@ -218,7 +218,7 @@ frontend/src/
 
 ## Git
 - Одна фича — одна ветка `feat/<фича>`. В `main` вливаем часто, перед этим подтягиваем свежий `main`.
-- Общие файлы (`schemas.py`, `types.ts`, `main.py`, `api/client.ts`, `App.tsx`) меняем минимально и сообщаем в чат.
+- Общие файлы (`schemas.py`, `types.ts`, `main.py`, `api/client.ts`, `App.jsx` или `App.tsx`) меняем минимально и сообщаем в чат.
 - Не делай push, merge, rebase и force-push, если об этом прямо не попросили.
 
 ## Когда задача готова
