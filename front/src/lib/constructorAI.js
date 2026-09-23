@@ -16,6 +16,10 @@ export function analyzeWithFallback(input, options) {
   return withFallback(analyzeTask, input, 'analyze', ({ draft }) => analyzeDraft(draft), options)
 }
 
+export function aiStateFromAnalysis(data, input) {
+  return { data, source: data.source, raw: JSON.stringify(data), valid: data.source === 'ai', input, card: null }
+}
+
 export function cardWithFallback(input, options) {
   return withFallback(buildTaskCard, input, 'card', buildLocalTaskCard, options)
 }

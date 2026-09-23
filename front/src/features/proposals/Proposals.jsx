@@ -9,7 +9,7 @@ import { StatusChip } from '../../components/ui/StatusChip.jsx'
 import { cx } from '../../lib/cx.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
-export function Proposals({ tasks, proposals, teams, milestones, onDecide, onMilestone, newTaskId }) {
+export function Proposals({ tasks, proposals, teams, milestones, decidingId, onDecide, onMilestone, newTaskId }) {
   const tr = useT()
   const [tab, setTab] = useState(newTaskId || tasks[0]?.id)
   const task = tasks.find((x) => x.id === tab) || tasks[0]
@@ -19,6 +19,10 @@ export function Proposals({ tasks, proposals, teams, milestones, onDecide, onMil
     <div className="mx-auto max-w-4xl">
       <PageHead eyebrow={tr('pEyebrow')} title={tr('pTitle')} sub={tr('pSub')} />
 
+      {!tasks.length ? (
+        <div className="rounded-3xl border border-dashed border-stone-200 p-10 text-center text-sm text-stone-500">{tr('proposalsNoTasks')}</div>
+      ) : (
+        <>
       <div className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {tasks.map((x) => {
           const n = proposals.filter((p) => p.taskId === x.id && p.status === 'pending').length
@@ -46,6 +50,7 @@ export function Proposals({ tasks, proposals, teams, milestones, onDecide, onMil
         <div className="grid gap-3 md:grid-cols-2">
           {list.map((p) => {
             const team = teams.find((x) => x.id === p.teamId)
+            const busy = decidingId === p.id
             return (
               <Panel key={p.id} className={cx('q-in flex flex-col p-4 sm:p-5', p.status === 'accepted' && 'border-emerald-200', p.status === 'rejected' && 'opacity-60')}>
                 <div className="flex items-start justify-between gap-3">
@@ -68,19 +73,21 @@ export function Proposals({ tasks, proposals, teams, milestones, onDecide, onMil
                 <div className="mt-auto pt-4">
                   {p.status === 'pending' && (
                     <div className="grid grid-cols-2 gap-2">
-                      <Button variant="danger" onClick={() => onDecide(p.id, 'rejected')}><X className="size-4" />{tr('reject')}</Button>
-                      <Button variant="primary" onClick={() => onDecide(p.id, 'accepted')}><Check className="size-4" />{tr('accept')}</Button>
+                      <Button variant="danger" disabled={busy || !!decidingId} onClick={() => onDecide(p.id, 'rejected')}><X className="size-4" />{tr('reject')}</Button>
+                      <Button variant="primary" disabled={busy || !!decidingId} onClick={() => onDecide(p.id, 'accepted')}><Check className="size-4" />{tr('accept')}</Button>
                     </div>
                   )}
                   {p.status === 'accepted' && (milestones[p.id]
                     ? <div className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2.5 text-xs text-emerald-700"><Trophy className="size-4" />{tr('milestoneDone')}</div>
                     : <Button variant="success" className="w-full" onClick={() => onMilestone(p)}><Flag className="size-4" />{tr('confirmMilestone')}</Button>)}
-                  {p.status === 'rejected' && <Button variant="quiet" size="sm" onClick={() => onDecide(p.id, 'pending')}><RotateCcw className="size-3.5" />{tr('restorePending')}</Button>}
+                  {p.status === 'rejected' && <Button variant="quiet" size="sm" disabled={!!decidingId} onClick={() => onDecide(p.id, 'pending')}><RotateCcw className="size-3.5" />{tr('restorePending')}</Button>}
                 </div>
               </Panel>
             )
           })}
         </div>
+      )}
+        </>
       )}
     </div>
   )

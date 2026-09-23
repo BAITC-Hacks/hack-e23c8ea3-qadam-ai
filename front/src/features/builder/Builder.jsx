@@ -9,7 +9,7 @@ import { inputCls } from '../../components/ui/inputCls.js'
 import { cx } from '../../lib/cx.js'
 import { QUESTION_BANK } from '../../lib/ai.js'
 import { words, FONT_MONO, CRITERIA, CARD_FIELDS } from '../../lib/scoring.js'
-import { INDUSTRIES, SEED_DRAFTS } from '../../data/seed.js'
+import { INDUSTRIES, SEED_DRAFTS, industryKey } from '../../data/seed.js'
 import { useT } from '../../i18n/LangContext.jsx'
 
 export function Builder(p) {
@@ -67,7 +67,7 @@ export function Builder(p) {
               <div className="flex items-center gap-2">
                 <label htmlFor="industry" className="text-xs text-stone-500">{t('industry')}</label>
                 <select id="industry" value={industry} onChange={(e) => setIndustry(e.target.value)} className="rounded-lg border border-stone-200 bg-white px-2.5 py-1.5 text-xs text-stone-700 outline-none focus:border-orange-400">
-                  {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
+                  {INDUSTRIES.map((i) => <option key={i} value={i}>{t(industryKey(i))}</option>)}
                 </select>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -180,7 +180,7 @@ export function Builder(p) {
               </Field>
               <Field label={t('industry')}>
                 <select id="card-industry" value={card.industry} onChange={(e) => updateCard('industry', e.target.value)} className={inputCls}>
-                  {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
+                  {INDUSTRIES.map((i) => <option key={i} value={i}>{t(industryKey(i))}</option>)}
                 </select>
               </Field>
             </div>

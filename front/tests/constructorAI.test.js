@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { analyzeWithFallback, cardWithFallback } from '../src/lib/constructorAI.js'
+import { analyzeWithFallback, aiStateFromAnalysis, cardWithFallback } from '../src/lib/constructorAI.js'
+import { isValidSession } from '../src/lib/catalog.js'
+import { SEED_TASKS, SEED_TEAMS, SEED_PROPOSALS } from '../src/data/seed.js'
 
 const draft = 'Нужен бот для записи клиентов в салон'
 const input = { draft, industry: 'Услуги' }
@@ -39,6 +41,15 @@ test('both constructor requests use AI responses, including question text and wa
     ['/api/constructor/analyze', input],
     ['/api/constructor/card', { ...input, answers }],
   ])
+})
+
+test('AI and fallback analyses both survive saved-session validation', () => {
+  const session = { tasks: SEED_TASKS, teams: SEED_TEAMS, proposals: SEED_PROPOSALS }
+  for (const data of [analysis, { ...analysis, source: 'stub' }]) {
+    const ai = aiStateFromAnalysis(data, input)
+    assert.equal(ai.valid, data.source === 'ai')
+    assert.equal(isValidSession({ ...session, builder: { step: 2, draft, industry: input.industry, ai } }), true)
+  }
 })
 
 test('invalid AI responses independently switch each step to the local stub', async (t) => {
