@@ -8,10 +8,12 @@ import { cx } from '../../lib/cx.js'
 import { LEVELS, levelOf, FONT_MONO, ACCENT_GLOW } from '../../lib/scoring.js'
 import { filterCatalog, positionOf, recommendTasks } from '../../lib/catalog.js'
 import { INDUSTRIES, industryKey } from '../../data/seed.js'
-import { useT } from '../../i18n/LangContext.jsx'
+import { useT, useLang } from '../../i18n/LangContext.jsx'
 
 export function Catalog({ tasks, proposals, role, team, ready, error, onOpen }) {
   const tr = useT()
+  const { lang } = useLang()
+  const plural = new Intl.PluralRules(lang === 'kk' ? 'kk' : lang)
   const [q, setQ] = useState('')
   const [topic, setTopic] = useState('__all__')
   const [lvl, setLvl] = useState('all')
@@ -38,18 +40,25 @@ export function Catalog({ tasks, proposals, role, team, ready, error, onOpen }) 
       )}
 
       {recs.length > 0 && (
-        <div className="mb-6">
-          <div className="mb-2.5 flex items-center gap-2 text-sm text-stone-600"><Sparkles className="size-4 text-orange-600" />{tr('recsLead')} {team.name} <span className="text-xs text-stone-500">· {tr('recsHint')}</span></div>
-          <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0">
+        <section className="@container mb-6">
+          <div className="mb-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-stone-700"><Sparkles className="size-4 shrink-0 text-orange-600" />{tr('recsLead')} {team.name}</div>
+            <p className="mt-0.5 pl-6 text-xs text-stone-500">{tr('recsHint')}</p>
+          </div>
+          {/* Ширина по контейнеру, а не по экрану: в узкой колонке — список, в широкой — три в ряд */}
+          <div className="grid gap-2 @2xl:grid-cols-3 @2xl:gap-3">
             {recs.map(({ t: task, match }) => (
-              <button key={task.id} type="button" onClick={() => onOpen(task.id)} className="w-64 shrink-0 snap-start rounded-3xl border border-orange-200 bg-orange-50/70 p-4 text-left transition hover:border-orange-300 sm:w-auto">
-                <div className="flex items-center justify-between text-[11px] text-orange-600"><span>{match} {tr('matches')}</span><MiniRing score={task.score} size={32} /></div>
-                <div className="mt-2 line-clamp-2 text-sm font-medium text-stone-900">{task.title}</div>
-                <div className="mt-1 text-xs text-stone-500">{task.company}</div>
+              <button key={task.id} type="button" onClick={() => onOpen(task.id)}
+                className="flex min-w-0 items-center gap-3 rounded-2xl border border-orange-200 bg-orange-50/70 p-3 text-left transition hover:border-orange-300">
+                <MiniRing score={task.score} size={40} />
+                <div className="min-w-0 flex-1">
+                  <div className="line-clamp-2 text-sm font-medium leading-snug text-stone-900">{task.title}</div>
+                  <div className="mt-0.5 truncate text-xs text-stone-500">{task.company} · <span className="text-orange-600">{match} {tr(`matches_${plural.select(match)}`)}</span></div>
+                </div>
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
       <div className="mb-4 space-y-3">
@@ -57,13 +66,13 @@ export function Catalog({ tasks, proposals, role, team, ready, error, onOpen }) 
           <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-stone-500" />
           <input id="catalog-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={tr('searchPh')} className={cx(inputCls, 'pl-10')} />
         </div>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setTopic('__all__')} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', topic === '__all__' ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-800')}>{tr('filterAll')}</button>
           {INDUSTRIES.map((ind) => (
             <button key={ind} type="button" onClick={() => setTopic(ind)} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', topic === ind ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500 hover:text-stone-800')}>{tr(industryKey(ind))}</button>
           ))}
         </div>
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0">
+        <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setLvl('all')} className={cx('shrink-0 rounded-full border px-3 py-1 text-xs transition', lvl === 'all' ? 'border-stone-300 bg-stone-100 text-stone-900' : 'border-stone-200 text-stone-500')}>{tr('anyLevel')}</button>
           {LEVELS.map((l) => (
             <button key={l.key} type="button" onClick={() => setLvl(l.key)} className={cx('inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition', lvl === l.key ? l.chip : 'border-stone-200 text-stone-500')}>

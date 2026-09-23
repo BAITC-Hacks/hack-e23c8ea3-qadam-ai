@@ -7,10 +7,13 @@
     <meta name="theme-color" content="#F6F4F1">
     <script>
       // Apply before styles/React load to avoid a light flash on a dark visit.
+      // Preference: light | dark | system (follows the OS); nothing saved → light.
       (() => {
         let saved
         try { saved = localStorage.getItem('qadam.theme') } catch { /* private mode */ }
-        const dark = saved === 'dark'
+        let systemDark = false
+        try { systemDark = typeof matchMedia === 'function' && matchMedia('(prefers-color-scheme: dark)').matches } catch { /* no matchMedia */ }
+        const dark = saved === 'dark' || (saved === 'system' && systemDark)
         document.documentElement.dataset.theme = dark ? 'dark' : 'light'
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
         document.querySelector('meta[name="theme-color"]').content = dark ? '#1c1917' : '#F6F4F1'

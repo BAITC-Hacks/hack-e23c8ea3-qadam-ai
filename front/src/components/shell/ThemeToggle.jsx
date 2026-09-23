@@ -1,22 +1,38 @@
-import { Moon, Sun } from 'lucide-react'
+import { useId } from 'react'
+import { Moon, Sun, Monitor, Palette } from 'lucide-react'
 import { useT } from '../../i18n/LangContext.jsx'
 import { useTheme } from '../../theme/ThemeContext.js'
 import { cx } from '../../lib/cx.js'
 
-export function ThemeToggle() {
+const OPTIONS = [
+  { value: 'light', icon: Sun, label: 'themeOptLight' },
+  { value: 'dark', icon: Moon, label: 'themeOptDark' },
+  { value: 'system', icon: Monitor, label: 'themeOptSystem' },
+]
+
+/** Тема: светлая / тёмная / системная. Тот же сегмент, что и выбор языка. */
+export function ThemeToggle({ className }) {
   const t = useT()
-  const { theme, toggleTheme } = useTheme()
-  const dark = theme === 'dark'
-  const Icon = dark ? Moon : Sun
+  const { preference, setPreference } = useTheme()
+  const groupName = useId()
   return (
-    <button type="button" role="switch" aria-checked={dark} aria-label={t('themeDark')}
-      onClick={toggleTheme}
-      className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-stone-200 bg-surface px-3 py-2.5 text-left text-xs text-stone-700 transition-colors hover:border-orange-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/70">
-      <Icon aria-hidden="true" className="size-4 text-orange-600" />
-      <span>{t(dark ? 'themeDark' : 'themeLight')}</span>
-      <span aria-hidden="true" className={cx('ml-auto flex h-5 w-9 shrink-0 items-center rounded-full p-0.5', dark ? 'bg-orange-500' : 'bg-stone-300')}>
-        <span className={cx('size-4 rounded-full bg-surface shadow-sm transition-transform motion-reduce:transition-none', dark && 'translate-x-4')} />
-      </span>
-    </button>
+    <div className={className}>
+      <div className="mb-1.5 flex items-center gap-1.5 px-1 text-[11px] uppercase tracking-[0.12em] text-stone-500"><Palette className="size-3.5" />{t('theme')}</div>
+      <div role="radiogroup" aria-label={t('theme')} className="grid grid-cols-3 rounded-full border border-stone-200 bg-stone-100/70 p-1">
+        {OPTIONS.map(({ value, icon: Icon, label }) => {
+          const active = preference === value
+          return (
+            <label key={value} title={t(label)} className="min-w-0 cursor-pointer">
+              <input type="radio" name={groupName} value={value} checked={active} onChange={() => setPreference(value)} className="peer sr-only" />
+              <span className={cx('flex h-7 min-w-0 items-center justify-center gap-1 rounded-full px-1 text-[11px] font-medium transition peer-focus-visible:ring-2 peer-focus-visible:ring-orange-400/70',
+                active ? 'bg-surface text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-800')}>
+                <Icon aria-hidden="true" className={cx('size-3.5 shrink-0', active && 'text-orange-600')} />
+                <span className="truncate">{t(label)}</span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+    </div>
   )
 }

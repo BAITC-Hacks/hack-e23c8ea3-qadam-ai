@@ -1,5 +1,6 @@
 export default {
   themeLight: 'Light theme', themeDark: 'Dark theme',
+  theme: 'Theme', themeOptLight: 'Light', themeOptDark: 'Dark', themeOptSystem: 'System',
   tagline: 'business and students, one step closer', business: 'Business', students: 'Students', youTeam: 'Your team',
   navNew: 'New task', navCatalog: 'Catalog', navInbox: 'Proposals', navMine: 'Our proposals',
   howAI: 'How the AI works', reset: 'Reset demo', language: 'Language', menu: 'Menu',
@@ -58,6 +59,7 @@ export default {
   recsLead: 'The assistant suggests for',
   recsHint: 'based on your skills; other tasks stay open',
   matches: 'matches',
+  matches_one: 'match', matches_other: 'matches',
   searchPh: 'Search tasks and companies',
   tasksByScore: 'tasks · by score',
   badgeNew: 'New',

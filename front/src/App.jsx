@@ -65,15 +65,13 @@ function Shell() {
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-stone-200 bg-surface/85 px-4 py-3 backdrop-blur-xl lg:hidden">
+          <header className="sticky top-0 z-30 grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-2 border-b border-stone-200 bg-surface/85 px-4 py-3 backdrop-blur-xl sm:grid-cols-[auto_1fr_auto] lg:hidden">
             <Brand compact />
-            <div className="flex items-center gap-2">
-              <RoleSwitch role={q.role} onChange={q.switchRole} compact />
-              <button type="button" onClick={() => q.setMenuOpen(true)} aria-label={`${t('language')} · ${t('menu')}`}
-                className="flex h-9 items-center gap-1 rounded-full border border-stone-200 bg-surface px-2.5 text-[11px] font-semibold text-stone-700">
-                <Globe className="size-4 text-orange-600" />{LANGS.find((l) => l.code === lang).short}
-              </button>
-            </div>
+            <RoleSwitch role={q.role} onChange={q.switchRole} compact className="col-span-2 row-start-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 sm:justify-self-end" />
+            <button type="button" onClick={() => q.setMenuOpen(true)} aria-label={`${t('language')} · ${t('menu')}`}
+              className="col-start-2 row-start-1 flex h-9 items-center gap-1 rounded-full border border-stone-200 bg-surface px-2.5 text-[11px] font-semibold text-stone-700 sm:col-start-3">
+              <Globe className="size-4 text-orange-600" />{LANGS.find((l) => l.code === lang).short}
+            </button>
           </header>
 
           <div className="flex min-w-0 flex-1 flex-col xl:flex-row">
